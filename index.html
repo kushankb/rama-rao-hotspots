@@ -104,13 +104,14 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   <header>
     <span class="label">TCP/IND/4005 · CRVA future hazard · district level</span>
     <h1>Where each Rama Rao hazard bites</h1>
-    <p class="lede">Change in each of the 15 future-hazard indicators from Rama Rao et al. (2020), by district, from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots: the 10% with the most adverse change, counted only where the change is actually adverse.</p>
+    <p class="lede">Change in each of the 15 future-hazard indicators from Rama Rao et al. (2020), by district, from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots, identified either as the worst 10% of districts (percentile) or as districts more than one standard deviation worse than the mean change across districts (SD). Either way a district only counts if its change is actually adverse.</p>
   </header>
 
   <div class="controls" role="group" aria-label="Scenario">
     <div class="seg" id="scen"></div>
     <div class="key"><span>better</span><span class="ramp" aria-hidden="true"></span><span>worse for agriculture</span></div>
-    <div class="key"><span class="hotkey" aria-hidden="true"></span><span>hotspot (worst 10%)</span></div>
+    <div class="seg" id="method" role="group" aria-label="Hotspot method"></div>
+    <div class="key"><span class="hotkey" aria-hidden="true"></span><span id="hotlabel">hotspot</span></div>
   </div>
 
   <section class="summary">
@@ -122,7 +123,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   <div class="grid" id="cards"></div>
 
   <footer>
-    <p>Method. Each value is the district mean of the 0.1° INDRA-CMIP6 ensemble over the future window minus the 1985–2014 baseline (percent change for rainfall and rainy days). Unusually hot and cold days use ±2 standard deviations of the baseline daily anomaly instead of the Atlas's ±4 °C, and drought proneness is proxied by SPI-3 drought frequency, because averaging 14 models removes most day-to-day and year-to-year variability. Windows: ~2050 = 2036–2065, ~2100 = 2071–2100.</p>
+    <p>Method. Each value is the district mean of the 0.1° INDRA-CMIP6 ensemble over the future window minus the 1985–2014 baseline (percent change for rainfall and rainy days). Unusually hot and cold days use ±2 standard deviations of the baseline daily anomaly instead of the Atlas's ±4 °C, and drought proneness is proxied by SPI-3 drought frequency, because averaging 14 models removes most day-to-day and year-to-year variability. Windows: ~2050 = 2036–2065, ~2100 = 2071–2100. Hotspots: the percentile method flags the worst 10% of districts; the SD method flags districts whose change is more than one standard deviation worse than the mean change across all districts in that scenario. No values are removed; map colours saturate beyond the 2nd and 98th percentiles for readability only.</p>
     <p>Source: Rama Rao C.A. et al. (2020), Atlas on Risk and Vulnerability of Indian Agriculture to Climate Change, ICAR-CRIDA, Tables 1 and 5c and section 4.4.</p>
   </footer>
 </div>
@@ -149,6 +150,10 @@ const INFO = {
 };
 const SCEN = { SSP245_2050: "SSP2-4.5 · ~2050", SSP585_2050: "SSP5-8.5 · ~2050", SSP585_2100: "SSP5-8.5 · ~2100" };
 let scen = "SSP245_2050";
+const METHODS = { pct: "Worst 10%", sd: "Mean + 1 SD", both: "Both" };
+const METHOD_LABEL = { pct: "hotspot: worst 10% of districts", sd: "hotspot: more than 1 SD worse than the mean", both: "hotspot: flagged by both methods" };
+let method = "pct";
+try { const m = localStorage.getItem("rr-hot-method"); if (m && METHODS[m]) method = m; } catch (e) {}
 try { const s = localStorage.getItem("rr-hot-scen"); if (s && SCEN[s]) scen = s; } catch (e) {}
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -174,15 +179,19 @@ function analyse(comp) {
   const adv = raw.map(v => v == null ? null : v * comp.sign);   // positive = worse
   const vals = adv.filter(v => v != null).sort((a, b) => a - b);
   const p90 = quantile(vals, 0.9);
-  const thr = Math.max(p90, 1e-9);
-  const hot = adv.map(v => v != null && v > 0 && v >= thr);
+  const mean = vals.reduce((x, y) => x + y, 0) / vals.length;
+  const sd = Math.sqrt(vals.reduce((x, y) => x + (y - mean) ** 2, 0) / vals.length);
+  const hotP = adv.map(v => v != null && v > 0 && v >= p90);
+  const hotS = adv.map(v => v != null && v > 0 && v > mean + sd);
+  const hotB = hotP.map((x, i) => x && hotS[i]);
+  const hot = method === "pct" ? hotP : method === "sd" ? hotS : hotB;
   const nAdverse = vals.filter(v => v > 0).length;
   const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-9);
   const rs = raw.filter(v => v != null).slice().sort((a, b) => a - b);
   const rel = DATA.rel[comp.id][scen];
   const relOk = rel.filter(v => v != null);
   const nWorse10 = relOk.filter(v => v * comp.sign >= 10).length;
-  return { raw, adv, hot, nAdverse, nWorse10, nRel: relOk.length, nZero: rel.length - relOk.length, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
+  return { raw, adv, hot, hotP, hotS, hotB, nAdverse, nWorse10, nRel: relOk.length, nZero: rel.length - relOk.length, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
 }
 
 function mix(a, b, t) {
@@ -248,6 +257,8 @@ function hotStates(a) {
 
 function render() {
   document.querySelectorAll("#scen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === scen)));
+  document.querySelectorAll("#method button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === method)));
+  document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
   const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
   document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th>Districts ≥ 10% worse</th><th style="text-align:right">Zero baseline (left out)</th></tr></thead><tbody>` +
     rows.map(({ c, a }) => {
@@ -278,9 +289,11 @@ function render() {
        <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>
        <div class="stat"><span class="label">≥ 10% worse</span><span class="v">${a.nWorse10} of ${a.nRel}</span></div>`;
     const hs = hotStates(a), nHot = a.hot.filter(Boolean).length;
-    el.querySelector(".hotlist").innerHTML = nHot
+    const cnt = x => x.filter(Boolean).length;
+    el.querySelector(".hotlist").innerHTML = (nHot
       ? `<b>${nHot} hotspot districts</b>, most in ${hs.map(([s, n]) => `${s} (${n})`).join(", ")}.`
-      : `<b>No hotspots:</b> no district shows an adverse change in this scenario.`;
+      : `<b>No hotspots</b> by this method in this scenario.`)
+      + ` <span class="num">Worst 10%: ${cnt(a.hotP)} · mean + 1 SD: ${cnt(a.hotS)} · both: ${cnt(a.hotB)}</span>`;
   });
 }
 
@@ -288,6 +301,13 @@ document.getElementById("scen").innerHTML = Object.entries(SCEN).map(([k, v]) =>
 document.getElementById("scen").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   scen = b.dataset.s; try { localStorage.setItem("rr-hot-scen", scen); } catch (err) {}
+  render();
+});
+
+document.getElementById("method").innerHTML = Object.entries(METHODS).map(([k, v]) => `<button type="button" data-m="${k}" aria-pressed="false">${v}</button>`).join("");
+document.getElementById("method").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  method = b.dataset.m; try { localStorage.setItem("rr-hot-method", method); } catch (err) {}
   render();
 });
 
