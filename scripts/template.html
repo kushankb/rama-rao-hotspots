@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html{color-scheme:light dark}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Rama Rao Hazard Hotspots</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a summary table up top, then one card per indicator (map + distribution) in a two-column grid that stacks on phones. */
+:root {
+  --ground: #f4f5f1;
+  --panel: #ffffff;
+  --ink: #1d231f;
+  --muted: #5d665f;
+  --rule: #d9ddd4;
+  --accent: #1f5f5b;
+  --adverse: #b4441e;
+  --adverse-soft: #e9b49c;
+  --favour: #2c6e8f;
+  --favour-soft: #a9c9da;
+  --neutral: #ecebe4;
+  --hot: #1d231f;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34;
+    --accent: #7fc3bc; --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568;
+    --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34;
+  --accent: #7fc3bc; --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568;
+  --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: 30px; line-height: 1.15; }
+h2 { font-size: 20px; }
+h3 { font-size: 17px; }
+p { margin: 0; max-width: 68ch; }
+.lede { color: var(--muted); }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+header { display: grid; gap: 10px; }
+.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--ground); padding-block: 10px; border-bottom: 1px solid var(--rule); }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 13px var(--font-body); color: var(--ink); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--rule); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
+.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.key { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.ramp { width: 150px; height: 10px; border-radius: 2px; background: linear-gradient(to right, var(--favour), var(--favour-soft), var(--neutral), var(--adverse-soft), var(--adverse)); }
+.hotkey { width: 12px; height: 12px; border: 2px solid var(--hot); border-radius: 2px; display: inline-block; }
+
+.summary { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 12px; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+td.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.agree { background: color-mix(in srgb, var(--favour) 18%, transparent); color: var(--favour); }
+.pill.differ { background: color-mix(in srgb, var(--adverse) 18%, transparent); color: var(--adverse); }
+.pill.partial { background: var(--neutral); color: var(--muted); }
+.bar { height: 8px; background: var(--neutral); border-radius: 2px; overflow: hidden; min-width: 80px; }
+.bar i { display: block; height: 100%; background: var(--adverse); }
+
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+@media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.weight { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.flag { font-size: 12px; color: var(--adverse); }
+.viz { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+@media (max-width: 520px) { .viz { grid-template-columns: minmax(0, 1fr); } }
+canvas.map { width: 100%; aspect-ratio: 1 / 1.08; max-width: 100%; display: block; }
+svg.hist { width: 100%; height: auto; display: block; overflow: visible; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { display: grid; gap: 2px; }
+.stat .v { font-family: var(--font-data); font-size: 14px; font-variant-numeric: tabular-nums; }
+.compare { display: grid; gap: 6px; font-size: 13px; border-top: 1px solid var(--rule); padding-top: 10px; }
+.compare div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+.hotlist { font-size: 13px; color: var(--muted); }
+.hotlist b { color: var(--ink); font-weight: 600; }
+.tip { position: fixed; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 10; }
+footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="label">TCP/IND/4005 · CRVA future hazard · district level</span>
+    <h1>Where each Rama Rao hazard bites</h1>
+    <p class="lede">Change in each of the 15 future-hazard indicators from Rama Rao et al. (2020), by district, from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots: the 10% with the most adverse change, counted only where the change is actually adverse.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Scenario">
+    <div class="seg" id="scen"></div>
+    <div class="key"><span>better</span><span class="ramp" aria-hidden="true"></span><span>worse for agriculture</span></div>
+    <div class="key"><span class="hotkey" aria-hidden="true"></span><span>hotspot (worst 10%)</span></div>
+  </div>
+
+  <section class="summary">
+    <h2>How this dataset compares with the Atlas</h2>
+    <p class="lede">Share of districts where the change is adverse, for the selected scenario, set against what the Atlas reports for RCP 4.5, 2020–49 vs 1976–2005. The Atlas figures are counts of its 573 rural districts, quoted from section 4.4.</p>
+    <div class="tablewrap"><table id="sumtable"></table></div>
+  </section>
+
+  <div class="grid" id="cards"></div>
+
+  <footer>
+    <p>Method. Each value is the district mean of the 0.1° INDRA-CMIP6 ensemble over the future window minus the 1985–2014 baseline (percent change for rainfall and rainy days). Unusually hot and cold days use ±2 standard deviations of the baseline daily anomaly instead of the Atlas's ±4 °C, and drought proneness is proxied by SPI-3 drought frequency, because averaging 14 models removes most day-to-day and year-to-year variability. Windows: ~2050 = 2036–2065, ~2100 = 2071–2100.</p>
+    <p>Source: Rama Rao C.A. et al. (2020), Atlas on Risk and Vulnerability of Indian Agriculture to Climate Change, ICAR-CRIDA, Tables 1 and 5c and section 4.4.</p>
+  </footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const DATA = __DATA__;
+const INFO = {
+  annual_rain:  { label: "Annual rainfall", unit: "%", atlas: "Mostly +3 to 6%; more than 6% in 57 districts; no district drier.", verdict: "differ", why: "Increases are 2–3× the Atlas." },
+  june_rain:    { label: "June rainfall", unit: "%", atlas: "Marginal increase in 501 districts; decline in 27 (Karnataka, Maharashtra, Kerala).", verdict: "differ", why: "Much larger increases; almost no declines." },
+  july_rain:    { label: "July rainfall", unit: "%", atlas: "Up to +5% in 471 districts; decline in 12.", verdict: "differ", why: "Increases 2–3× larger." },
+  rainy_days:   { label: "Rainy days (≥ 2.5 mm)", unit: "%", atlas: "Fewer rainy days in 48 districts; 3+ more in about 20.", verdict: "partial", why: "Similar share declining; ensemble drizzle inflates counts." },
+  tmax:         { label: "Maximum temperature", unit: "°C", atlas: "+1.0 to 1.3 °C in 256 districts, +1.3 to 1.6 °C in 157.", verdict: "agree", why: "Same range." },
+  tmin:         { label: "Minimum temperature", unit: "°C", atlas: "Below +1.3 °C in 199 districts, above +1.6 °C in 89.", verdict: "agree", why: "Same range." },
+  hot_days:     { label: "Unusually hot days (Mar–May)", unit: "days", atlas: "More than one extra day in only 54 districts, mostly Himalayan and north-east.", verdict: "differ", why: "±2 SD threshold saturates on smoothed data.", flag: "Scaled threshold (±2 SD)" },
+  cold_days:    { label: "Unusually cold days (Dec–Feb)", unit: "days", atlas: "Marginal increase in 526 districts; noticeable in 29.", verdict: "differ", why: "Falls to zero everywhere: opposite sign.", flag: "Scaled threshold (±2 SD)" },
+  frost:        { label: "Frost days", unit: "days", atlas: "About the same in 548 districts; 10+ fewer days in 11 (J&K).", verdict: "agree", why: "No change outside the hills." },
+  drought:      { label: "Drought proneness", unit: "pts", atlas: "Increase in about 302 districts, decrease in 144.", verdict: "differ", why: "Falls almost everywhere: opposite sign.", flag: "Proxy: SPI-3 drought frequency" },
+  dry_spells:   { label: "Dry-spell score (≥ 14 days)", unit: "score", atlas: "Increase in 119 districts; unchanged in 85.", verdict: "partial", why: "Fewer increases; mostly declines." },
+  p99_rain:     { label: "99th-percentile daily rain", unit: "mm", atlas: "+2 to 4 mm in 283 districts; more than 4 mm in 20.", verdict: "agree", why: "Same direction, slightly smaller." },
+  events_100mm: { label: "Events > 100 mm in 3 days", unit: "events", atlas: "Increase in all districts; more than 1.5 extra events in about 25.", verdict: "partial", why: "Rare in smoothed data; zero in about half." },
+  rx1_pct:      { label: "Max 1-day rain, % of normal", unit: "pts", atlas: "Marginal increase in most districts; decrease in 55.", verdict: "agree", why: "Same direction and size." },
+  rx3_pct:      { label: "Max 3-day rain, % of normal", unit: "pts", atlas: "+0.2 to 0.4 points in 174 districts; more than 0.4 in 25.", verdict: "agree", why: "Same direction and size." },
+};
+const SCEN = { SSP245_2050: "SSP2-4.5 · ~2050", SSP585_2050: "SSP5-8.5 · ~2050", SSP585_2100: "SSP5-8.5 · ~2100" };
+let scen = "SSP245_2050";
+try { const s = localStorage.getItem("rr-hot-scen"); if (s && SCEN[s]) scen = s; } catch (e) {}
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const fmt = v => { const a = Math.abs(v); return (a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toFixed(2)); };
+const sgn = v => (v > 0 ? "+" : "") + fmt(v);
+
+// geometry: equirectangular with cos(lat) correction, fitted once
+let bounds = [Infinity, Infinity, -Infinity, -Infinity];
+const rings = DATA.districts.map(d => {
+  const polys = d.g.type === "Polygon" ? [d.g.coordinates] : d.g.coordinates;
+  polys.forEach(p => p.forEach(r => r.forEach(([x, y]) => {
+    bounds[0] = Math.min(bounds[0], x); bounds[1] = Math.min(bounds[1], y);
+    bounds[2] = Math.max(bounds[2], x); bounds[3] = Math.max(bounds[3], y);
+  })));
+  return polys;
+});
+const kx = Math.cos(22 * Math.PI / 180);
+
+function quantile(sorted, q) { const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); }
+
+function analyse(comp) {
+  const raw = DATA.values[comp.id][scen];
+  const adv = raw.map(v => v == null ? null : v * comp.sign);   // positive = worse
+  const vals = adv.filter(v => v != null).sort((a, b) => a - b);
+  const p90 = quantile(vals, 0.9);
+  const thr = Math.max(p90, 1e-9);
+  const hot = adv.map(v => v != null && v > 0 && v >= thr);
+  const nAdverse = vals.filter(v => v > 0).length;
+  const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-9);
+  const rs = raw.filter(v => v != null).slice().sort((a, b) => a - b);
+  return { raw, adv, hot, nAdverse, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
+}
+
+function mix(a, b, t) {
+  const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
+  return "rgb(" + pa.map((x, i) => Math.round(x + (pb[i] - x) * t)).join(",") + ")";
+}
+function colorFor(v, amax) {
+  if (v == null) return css("--panel");
+  const t = Math.max(-1, Math.min(1, v / amax));
+  const neu = css("--neutral");
+  if (t >= 0) return t < 0.5 ? mix(neu, css("--adverse-soft"), t * 2) : mix(css("--adverse-soft"), css("--adverse"), (t - 0.5) * 2);
+  const u = -t;
+  return u < 0.5 ? mix(neu, css("--favour-soft"), u * 2) : mix(css("--favour-soft"), css("--favour"), (u - 0.5) * 2);
+}
+
+function drawMap(canvas, a) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const bw = (bounds[2] - bounds[0]) * kx, bh = bounds[3] - bounds[1];
+  const s = Math.min(w / bw, h / bh) * 0.98, ox = (w - bw * s) / 2, oy = (h - bh * s) / 2;
+  const P = ([x, y]) => [ox + (x - bounds[0]) * kx * s, oy + (bounds[3] - y) * s];
+  canvas._proj = { s, ox, oy };
+  const path = polys => { ctx.beginPath(); polys.forEach(p => p.forEach(r => r.forEach((c, i) => { const [X, Y] = P(c); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }))); };
+  ctx.lineWidth = 0.4; ctx.strokeStyle = css("--rule");
+  rings.forEach((polys, i) => { path(polys); ctx.fillStyle = colorFor(a.adv[i], a.amax); ctx.fill("evenodd"); ctx.stroke(); });
+  ctx.lineWidth = 1.6; ctx.strokeStyle = css("--hot");
+  rings.forEach((polys, i) => { if (a.hot[i]) { path(polys); ctx.stroke(); } });
+  canvas._paths = rings.map(polys => { const p2 = new Path2D(); polys.forEach(p => p.forEach(r => r.forEach((c, j) => { const [X, Y] = P(c); j ? p2.lineTo(X, Y) : p2.moveTo(X, Y); }))); return p2; });
+}
+
+function drawHist(svg, comp, a) {
+  const W = 300, H = 170, m = { l: 34, r: 8, t: 10, b: 30 };
+  const vals = a.raw.filter(v => v != null);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  lo = Math.min(lo, 0); hi = Math.max(hi, 0);
+  if (hi - lo < 1e-6) { hi = lo + 1; }
+  const nb = 24, step = (hi - lo) / nb, counts = new Array(nb).fill(0);
+  vals.forEach(v => counts[Math.min(nb - 1, Math.floor((v - lo) / step))]++);
+  const cmax = Math.max(...counts);
+  const x = v => m.l + (v - lo) / (hi - lo) * (W - m.l - m.r), y = c => H - m.b - c / cmax * (H - m.t - m.b);
+  const bars = counts.map((c, i) => {
+    const mid = lo + (i + 0.5) * step;
+    return `<rect x="${x(lo + i * step) + 0.5}" y="${y(c)}" width="${Math.max(0.5, x(lo + (i + 1) * step) - x(lo + i * step) - 1)}" height="${H - m.b - y(c)}" fill="${colorFor(mid * comp.sign, a.amax)}" stroke="var(--rule)" stroke-width="0.5"/>`;
+  }).join("");
+  const ticks = [lo, 0, hi].filter((v, i, arr) => arr.indexOf(v) === i).map(v => `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font-data)">${sgn(v)}</text>`).join("");
+  const zero = `<line x1="${x(0)}" x2="${x(0)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 2"/>`;
+  const med = `<line x1="${x(a.med)}" x2="${x(a.med)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--accent)" stroke-width="1.5"/><text x="${x(a.med)}" y="${m.t + 2}" dx="4" font-size="10" fill="var(--accent)" font-family="var(--font-data)" dominant-baseline="hanging">median</text>`;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--rule)"/>
+    <text x="${m.l - 6}" y="${y(cmax)}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">${cmax}</text>
+    <text x="${m.l - 6}" y="${H - m.b}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">0</text>
+    ${bars}${zero}${med}${ticks}
+    <text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">change (${INFO[comp.id].unit}) · districts per bin</text>`;
+}
+
+function hotStates(a) {
+  const c = {};
+  DATA.districts.forEach((d, i) => { if (a.hot[i]) c[d.st] = (c[d.st] || 0) + 1; });
+  return Object.entries(c).sort((x, y) => y[1] - x[1]).slice(0, 4);
+}
+
+function render() {
+  document.querySelectorAll("#scen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === scen)));
+  const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
+  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th>Districts with adverse change</th><th>Atlas (RCP 4.5)</th><th>Match</th></tr></thead><tbody>` +
+    rows.map(({ c, a }) => {
+      const pct = a.nAdverse / a.n * 100, inf = INFO[c.id];
+      return `<tr><td>${inf.label}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td>
+        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;width:38px;text-align:right">${pct.toFixed(0)}%</span></div></td>
+        <td style="font-size:12px;color:var(--muted)">${inf.atlas}</td>
+        <td><span class="pill ${inf.verdict}">${inf.verdict === "agree" ? "agrees" : inf.verdict === "differ" ? "differs" : "partly"}</span></td></tr>`;
+    }).join("") + "</tbody>";
+
+  const host = document.getElementById("cards");
+  if (!host.children.length) {
+    host.innerHTML = DATA.components.map(c => `<article class="card" id="c-${c.id}">
+      <div class="card-head"><h3>${INFO[c.id].label}</h3><span class="weight">weight ${c.weight}% · ${c.sign > 0 ? "increase = worse" : "increase = better"}</span></div>
+      ${INFO[c.id].flag ? `<div class="flag">${INFO[c.id].flag}</div>` : ""}
+      <div class="viz"><canvas class="map" role="img" aria-label="Map of change in ${INFO[c.id].label} by district"></canvas><svg class="hist" role="img" aria-label="Distribution of district changes"></svg></div>
+      <div class="stats"></div>
+      <div class="hotlist"></div>
+      <div class="compare"><div><span class="label">Atlas</span><span>${INFO[c.id].atlas}</span></div><div><span class="label">Here</span><span class="here"></span></div></div>
+    </article>`).join("");
+  }
+  rows.forEach(({ c, a }) => {
+    const el = document.getElementById("c-" + c.id), inf = INFO[c.id];
+    drawMap(el.querySelector("canvas"), a);
+    el.querySelector("canvas")._a = a; el.querySelector("canvas")._c = c;
+    drawHist(el.querySelector("svg"), c, a);
+    el.querySelector(".stats").innerHTML =
+      `<div class="stat"><span class="label">Median</span><span class="v">${sgn(a.med)} ${inf.unit}</span></div>
+       <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>
+       <div class="stat"><span class="label">Adverse</span><span class="v">${a.nAdverse} of ${a.n}</span></div>`;
+    const hs = hotStates(a), nHot = a.hot.filter(Boolean).length;
+    el.querySelector(".hotlist").innerHTML = nHot
+      ? `<b>${nHot} hotspot districts</b>, most in ${hs.map(([s, n]) => `${s} (${n})`).join(", ")}.`
+      : `<b>No hotspots:</b> no district shows an adverse change in this scenario.`;
+    el.querySelector(".here").textContent = inf.why;
+  });
+}
+
+document.getElementById("scen").innerHTML = Object.entries(SCEN).map(([k, v]) => `<button type="button" data-s="${k}" aria-pressed="false">${v}</button>`).join("");
+document.getElementById("scen").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  scen = b.dataset.s; try { localStorage.setItem("rr-hot-scen", scen); } catch (err) {}
+  render();
+});
+
+const tip = document.getElementById("tip");
+document.getElementById("cards").addEventListener("mousemove", e => {
+  const cv = e.target.closest("canvas.map"); if (!cv || !cv._paths) { tip.hidden = true; return; }
+  const r = cv.getBoundingClientRect(), ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
+  const X = (e.clientX - r.left) * dpr, Y = (e.clientY - r.top) * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const i = cv._paths.findIndex(p => ctx.isPointInPath(p, X, Y, "evenodd"));
+  if (i < 0) { tip.hidden = true; return; }
+  const d = DATA.districts[i], v = cv._a.raw[i];
+  tip.innerHTML = `<b>${d.n}</b>, ${d.st}<br><span class="num">${v == null ? "no data" : sgn(v) + " " + INFO[cv._c.id].unit}</span>${cv._a.hot[i] ? " · hotspot" : ""}`;
+  tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
+});
+document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidden = true; });
+
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+render();
+</script>
