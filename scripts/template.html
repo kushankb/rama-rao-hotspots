@@ -72,7 +72,7 @@ table { border-collapse: collapse; width: 100%; font-size: 13px; }
 th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
 td.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
+.unused-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
 .pill.agree { background: color-mix(in srgb, var(--favour) 18%, transparent); color: var(--favour); }
 .pill.differ { background: color-mix(in srgb, var(--adverse) 18%, transparent); color: var(--adverse); }
 .pill.partial { background: var(--neutral); color: var(--muted); }
@@ -114,8 +114,8 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   </div>
 
   <section class="summary">
-    <h2>How this dataset compares with the Atlas</h2>
-    <p class="lede">Share of districts where the change is adverse, for the selected scenario, set against what the Atlas reports for RCP 4.5, 2020–49 vs 1976–2005. The Atlas figures are counts of its 573 rural districts, quoted from section 4.4.</p>
+    <h2>Districts at least 10% worse than their historical mean</h2>
+    <p class="lede">For each district, the change in the indicator relative to its own 1985–2014 mean, (future − historical) / historical. A district counts when that relative change is 10% or more in the harmful direction: a fall for rainfall and rainy days, a rise for the other indicators. Districts whose historical mean is zero have no relative change and are left out of that indicator's count.</p>
     <div class="tablewrap"><table id="sumtable"></table></div>
   </section>
 
@@ -179,7 +179,10 @@ function analyse(comp) {
   const nAdverse = vals.filter(v => v > 0).length;
   const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-9);
   const rs = raw.filter(v => v != null).slice().sort((a, b) => a - b);
-  return { raw, adv, hot, nAdverse, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
+  const rel = DATA.rel[comp.id][scen];
+  const relOk = rel.filter(v => v != null);
+  const nWorse10 = relOk.filter(v => v * comp.sign >= 10).length;
+  return { raw, adv, hot, nAdverse, nWorse10, nRel: relOk.length, nZero: rel.length - relOk.length, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
 }
 
 function mix(a, b, t) {
@@ -246,13 +249,12 @@ function hotStates(a) {
 function render() {
   document.querySelectorAll("#scen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === scen)));
   const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
-  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th>Districts with adverse change</th><th>Atlas (RCP 4.5)</th><th>Match</th></tr></thead><tbody>` +
+  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th>Districts ≥ 10% worse</th><th style="text-align:right">Zero baseline (left out)</th></tr></thead><tbody>` +
     rows.map(({ c, a }) => {
-      const pct = a.nAdverse / a.n * 100, inf = INFO[c.id];
-      return `<tr><td>${inf.label}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td>
-        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;width:38px;text-align:right">${pct.toFixed(0)}%</span></div></td>
-        <td style="font-size:12px;color:var(--muted)">${inf.atlas}</td>
-        <td><span class="pill ${inf.verdict}">${inf.verdict === "agree" ? "agrees" : inf.verdict === "differ" ? "differs" : "partly"}</span></td></tr>`;
+      const pct = a.nRel ? a.nWorse10 / a.nRel * 100 : 0, inf = INFO[c.id];
+      return `<tr><td>${inf.label}${inf.flag ? ` <span class="flag">· ${inf.flag}</span>` : ""}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td>
+        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;white-space:nowrap">${a.nWorse10} of ${a.nRel}</span></div></td>
+        <td class="n">${a.nZero || "–"}</td></tr>`;
     }).join("") + "</tbody>";
 
   const host = document.getElementById("cards");
@@ -263,7 +265,7 @@ function render() {
       <div class="viz"><canvas class="map" role="img" aria-label="Map of change in ${INFO[c.id].label} by district"></canvas><svg class="hist" role="img" aria-label="Distribution of district changes"></svg></div>
       <div class="stats"></div>
       <div class="hotlist"></div>
-      <div class="compare"><div><span class="label">Atlas</span><span>${INFO[c.id].atlas}</span></div><div><span class="label">Here</span><span class="here"></span></div></div>
+      <div class="compare"><div><span class="label">Atlas</span><span>${INFO[c.id].atlas}</span></div></div>
     </article>`).join("");
   }
   rows.forEach(({ c, a }) => {
@@ -274,12 +276,11 @@ function render() {
     el.querySelector(".stats").innerHTML =
       `<div class="stat"><span class="label">Median</span><span class="v">${sgn(a.med)} ${inf.unit}</span></div>
        <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>
-       <div class="stat"><span class="label">Adverse</span><span class="v">${a.nAdverse} of ${a.n}</span></div>`;
+       <div class="stat"><span class="label">≥ 10% worse</span><span class="v">${a.nWorse10} of ${a.nRel}</span></div>`;
     const hs = hotStates(a), nHot = a.hot.filter(Boolean).length;
     el.querySelector(".hotlist").innerHTML = nHot
       ? `<b>${nHot} hotspot districts</b>, most in ${hs.map(([s, n]) => `${s} (${n})`).join(", ")}.`
       : `<b>No hotspots:</b> no district shows an adverse change in this scenario.`;
-    el.querySelector(".here").textContent = inf.why;
   });
 }
 

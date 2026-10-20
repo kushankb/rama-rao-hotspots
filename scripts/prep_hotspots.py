@@ -10,8 +10,10 @@ def rnd(c):
     if isinstance(c[0],(float,int)): return [round(c[0],3),round(c[1],3)]
     return [rnd(x) for x in c]
 feats=[]; vals={c["id"]:{f"{a}_{b}":[] for a,b in combos} for c in meta["components"]}
+rel={c["id"]:{f"{a}_{b}":[] for a,b in combos} for c in meta["components"]}
 for _,r in g.iterrows():
     k=f"district:{r.district_id}"
+    inds=s.get(k,{}).get("climate_hazard",{}).get("indicators",{})
     fhi=s.get(k,{}).get("climate_hazard",{}).get("future_hazard_index")
     if not fhi or r.geometry is None: continue
     gi=r.geometry.__geo_interface__
@@ -20,7 +22,11 @@ for _,r in g.iterrows():
         for a,b in combos:
             v=fhi.get(a,{}).get(b,{}).get("changes",{}).get(c["id"])
             vals[c["id"]][f"{a}_{b}"].append(None if v is None or v!=v else round(v,3))
-out={"districts":feats,"values":vals,"components":meta["components"],"combos":[f"{a}_{b}" for a,b in combos]}
+            # relative change (%) of the district mean; undefined when the baseline is 0
+            h=inds.get(c["source"],{}).get("historical",{}).get("mean")
+            f=inds.get(c["source"],{}).get(a,{}).get(b,{}).get("mean")
+            rel[c["id"]][f"{a}_{b}"].append(None if h is None or f is None or abs(h)<1e-9 else round((f-h)/abs(h)*100,2))
+out={"districts":feats,"values":vals,"rel":rel,"components":meta["components"],"combos":[f"{a}_{b}" for a,b in combos]}
 p=Path(__file__).parent / "data.json"
 open(p,"w").write(json.dumps(out,separators=(",",":")))
 print(len(feats),"districts", round(os.path.getsize(p)/1e6,2),"MB")
