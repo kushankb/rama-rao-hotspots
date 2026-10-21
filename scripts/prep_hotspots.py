@@ -27,7 +27,7 @@ for _,r in g.iterrows():
             "as":e["absolute"]["share"],"ac":e["absolute"]["category"],
             "rs":e["relative"]["score"],"rq":e["relative"]["quintile"],"rd":e["relative"]["sd_class"],
             "wet":e["wet_baseline"],
-            "w":[cid for cid,c in e["components"].items() if c["worse10"] and c["weight"]>0]})
+            "w":[cid for cid,c in e["components"].items() if c["worse"]]})
     for c in meta["components"]:
         for a,b in combos:
             v=fhi.get(a,{}).get(b,{}).get("changes",{}).get(c["id"])

@@ -135,7 +135,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   <section class="agg" aria-labelledby="agg-h">
     <h2 id="agg-h">Aggregate future hazard</h2>
     <div class="qtabs" id="qtabs">
-      <button type="button" class="qtab" data-q="abs" aria-pressed="true">Is climate getting worse here?<span>Weighted share of indicators at least 10% worse than the district's 1985–2014 mean</span></button>
+      <button type="button" class="qtab" data-q="abs" aria-pressed="true">Is climate getting worse here?<span>Weighted share of indicators whose change passes a worsening threshold, against the district's 1985–2014 mean</span></button>
       <button type="button" class="qtab" data-q="rel" aria-pressed="false">Where should we act first?<span>Districts ranked against each other within the scenario</span></button>
     </div>
     <div class="seg" id="relmode" role="group" aria-label="Ranking categories" hidden></div>
@@ -146,6 +146,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
         <div class="cats" id="aggcats"></div>
         <div class="rules">
           <div><b>Rainfall rule.</b> More rain counts as better only where the district's 1985–2014 rainfall is below 1,500 mm; in wetter districts an increase is neutral. Less rain counts as worse everywhere.</div>
+          <div><b>Thresholds.</b> A district counts as worse on an indicator when its change passes that indicator's threshold in the harmful direction. The thresholds are set for agricultural relevance and are not from the Atlas.</div>
           <div><b>Weights.</b> Atlas Table 5c weights, with unusually hot days, unusually cold days and drought set to 0 because the ensemble-mean data cannot represent them. Their 20% is shared among the other 12 in proportion.</div>
           <div id="wtable"></div>
         </div>
@@ -154,8 +155,8 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   </section>
 
   <section class="summary">
-    <h2>Districts at least 10% worse than their historical mean</h2>
-    <p class="lede">For each district, the change in the indicator relative to its own 1985–2014 mean, (future − historical) / historical. A district counts when that relative change is 10% or more in the harmful direction: a fall for rainfall and rainy days, a rise for the other indicators. Districts whose historical mean is zero have no relative change and are left out of that indicator's count.</p>
+    <h2>Districts past each indicator's worsening threshold</h2>
+    <p class="lede">For each district, the change from its own 1985–2014 mean, judged against a threshold set for that indicator (for example rainfall down 10%, Tmax up 1 °C, 99th-percentile rain up 5 mm). In districts with at least 1,500 mm of baseline rainfall, more rain is neutral. The same thresholds drive the "Is climate getting worse here?" view above.</p>
     <div class="tablewrap"><table id="sumtable"></table></div>
   </section>
 
@@ -300,12 +301,12 @@ function render() {
   document.querySelectorAll("#method button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === method)));
   document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
   const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
-  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th>Districts ≥ 10% worse</th><th style="text-align:right">Zero baseline (left out)</th></tr></thead><tbody>` +
+  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th style="text-align:right">Worse if</th><th>Districts past threshold</th></tr></thead><tbody>` +
     rows.map(({ c, a }) => {
-      const pct = a.nRel ? a.nWorse10 / a.nRel * 100 : 0, inf = INFO[c.id];
-      return `<tr><td>${inf.label}${inf.flag ? ` <span class="flag">· ${inf.flag}</span>` : ""}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td>
-        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;white-space:nowrap">${a.nWorse10} of ${a.nRel}</span></div></td>
-        <td class="n">${a.nZero || "–"}</td></tr>`;
+      const rowsA = DATA.agg[scen].filter(Boolean), nP = rowsA.filter(e => e.w.includes(c.id)).length;
+      const pct = rowsA.length ? nP / rowsA.length * 100 : 0, inf = INFO[c.id];
+      return `<tr><td>${inf.label}${inf.flag ? ` <span class="flag">· ${inf.flag}</span>` : ""}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td><td class="n">${THR[c.id]}</td>
+        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;white-space:nowrap">${nP} of ${rowsA.length}</span></div></td></tr>`;
     }).join("") + "</tbody>";
 
   const host = document.getElementById("cards");
@@ -327,7 +328,7 @@ function render() {
     el.querySelector(".stats").innerHTML =
       `<div class="stat"><span class="label">Median</span><span class="v">${sgn(a.med)} ${inf.unit}</span></div>
        <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>
-       <div class="stat"><span class="label">≥ 10% worse</span><span class="v">${a.nWorse10} of ${a.nRel}</span></div>`;
+       <div class="stat"><span class="label">Past threshold</span><span class="v">${DATA.agg[scen].filter(e => e && e.w.includes(c.id)).length} of ${DATA.agg[scen].filter(Boolean).length}</span></div>`;
     const hs = hotStates(a), nHot = a.hot.filter(Boolean).length;
     const cnt = x => x.filter(Boolean).length;
     el.querySelector(".hotlist").innerHTML = (nHot
@@ -368,9 +369,13 @@ document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidd
 
 // ---------- aggregate ----------
 let q = "abs", relMode = "quintile";
+const W0 = DATA.agg_meta.weights;
+const THR = { annual_rain: "−10%", june_rain: "−10%", july_rain: "−10%", rainy_days: "−10%", tmax: "+1.0 °C", tmin: "+1.0 °C",
+  hot_days: "+5 days", cold_days: "+2 days", frost: "+5 days", drought: "+5 pts", dry_spells: "+1", p99_rain: "+5 mm",
+  events_100mm: "+0.5 events", rx1_pct: "+10% relative", rx3_pct: "+10% relative" };
 const ABS_CATS = ["None", "Low", "Moderate", "High"];
 const REL_CATS = ["Very low", "Low", "Medium", "High", "Very high"];
-const CLABEL = { annual_rain: "annual rain", june_rain: "June rain", july_rain: "July rain", rainy_days: "rainy days", tmax: "Tmax", tmin: "Tmin",
+const CLABEL = { hot_days: "hot days", cold_days: "cold days", drought: "drought", annual_rain: "annual rain", june_rain: "June rain", july_rain: "July rain", rainy_days: "rainy days", tmax: "Tmax", tmin: "Tmin",
   frost: "frost", dry_spells: "dry spells", p99_rain: "99th pct rain", events_100mm: ">100 mm events", rx1_pct: "max 1-day %", rx3_pct: "max 3-day %" };
 function catColor(cat) {
   const t = q === "abs" ? { None: -0.15, Low: 0.3, Moderate: 0.65, High: 1 }[cat]
@@ -403,14 +408,14 @@ function renderAgg() {
   rows.forEach(e => { const c = aggCat(e); if (c in counts) counts[c]++; });
   const n = rows.filter(Boolean).length;
   document.getElementById("aggcats").innerHTML = cats.slice().reverse().map(c =>
-    `<div class="cat"><i style="background:${catColor(c)}"></i><span>${c}${q === "abs" ? { None: " (no indicator 10% worse)", Low: " (under 20% of weight)", Moderate: " (20–40%)", High: " (over 40%)" }[c] : ""}</span><span class="num">${counts[c]} of ${n}</span></div>`).join("");
+    `<div class="cat"><i style="background:${catColor(c)}"></i><span>${c}${q === "abs" ? { None: " (no indicator past threshold)", Low: " (under 20% of weight)", Moderate: " (20–40%)", High: " (over 40%)" }[c] : ""}</span><span class="num">${counts[c]} of ${n}</span></div>`).join("");
   const med = (() => { const v = rows.filter(Boolean).map(e => e.as).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; })();
   document.getElementById("agg-lede").textContent = q === "abs"
-    ? `For each district, the weight of indicators that end up at least 10% worse than the district's own 1985–2014 mean. This is an absolute measure, so scenarios can be compared. Median district: ${med.toFixed(1)}% of the weight.`
+    ? `For each district, the weight of indicators whose change from the district's own 1985–2014 mean passes that indicator's worsening threshold (table below). This is an absolute measure, so scenarios can be compared. Median district: ${med.toFixed(1)}% of the weight.`
     : `Each indicator ranks districts from least to most adverse change in this scenario; the weighted average rank gives a score from 0 to 100. Categories are ${relMode === "quintile" ? "fifths of districts (quintiles)" : "±0.5 and ±1.5 standard deviations around the mean score"}. This is relative: it shows where hazard is highest, not whether it is getting worse.`;
   const W = DATA.agg_meta.weights, A = DATA.agg_meta.atlas_weights;
-  document.getElementById("wtable").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Indicator</th><th style="text-align:right">Atlas</th><th style="text-align:right">Used</th></tr></thead><tbody>${
-    Object.keys(A).map(id => `<tr><td>${INFO[id].label}</td><td class="n">${A[id]}%</td><td class="n">${W[id] ? W[id].toFixed(1) + "%" : "0"}</td></tr>`).join("")}</tbody></table></div>`;
+  document.getElementById("wtable").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Indicator</th><th style="text-align:right">Atlas wt</th><th style="text-align:right">Used</th><th style="text-align:right">Worse if</th></tr></thead><tbody>${
+    Object.keys(A).map(id => `<tr><td>${INFO[id].label}</td><td class="n">${A[id]}%</td><td class="n">${W[id] ? W[id].toFixed(1) + "%" : "0"}</td><td class="n">${THR[id]}</td></tr>`).join("")}</tbody></table></div>`;
 }
 document.getElementById("qtabs").addEventListener("click", e => { const b = e.target.closest(".qtab"); if (!b) return; q = b.dataset.q; renderAgg(); });
 document.getElementById("relmode").innerHTML = `<button type="button" data-r="quintile" aria-pressed="true">Quintiles</button><button type="button" data-r="sd" aria-pressed="false">Mean ± SD</button>`;
@@ -423,7 +428,7 @@ document.getElementById("aggmap").addEventListener("mousemove", e => {
   if (!row) { tip.hidden = true; return; }
   const d = DATA.districts[i];
   tip.innerHTML = `<b>${d.n}</b>, ${d.st}${row.wet ? " · wet (≥ 1,500 mm)" : ""}<br>` + (q === "abs"
-    ? `${row.ac}: <span class="num">${row.as.toFixed(1)}%</span> of weight 10% worse<br>${row.w.length ? "Worse: " + row.w.map(c => CLABEL[c]).join(", ") : "No indicator 10% worse"}`
+    ? `${row.ac}: <span class="num">${row.as.toFixed(1)}%</span> of weight past threshold<br>${row.w.filter(c => W0[c]).length ? "Past threshold: " + row.w.filter(c => W0[c]).map(c => CLABEL[c]).join(", ") : "No weighted indicator past threshold"}`
     : `${aggCat(row)}: score <span class="num">${row.rs.toFixed(1)}</span> of 100`);
   tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
 });
