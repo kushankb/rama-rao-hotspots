@@ -97,6 +97,23 @@ svg.hist { width: 100%; height: auto; display: block; overflow: visible; }
 .hotlist { font-size: 13px; color: var(--muted); }
 .hotlist b { color: var(--ink); font-weight: 600; }
 .tip { position: fixed; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 10; }
+
+.agg { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
+.qtabs { display: flex; flex-wrap: wrap; gap: 10px; }
+.qtab { font: 600 15px var(--font-display); text-align: left; color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; cursor: pointer; display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
+.qtab span { font: 400 12px var(--font-body); color: var(--muted); }
+.qtab[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.qtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.agg-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .agg-body { grid-template-columns: minmax(0, 1fr); } }
+canvas.aggmap { width: 100%; aspect-ratio: 1 / 1.08; display: block; }
+.cats { display: grid; gap: 6px; }
+.cat { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.cat i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--rule); }
+.cat .num { color: var(--muted); }
+.side { display: grid; gap: 14px; min-width: 0; }
+.rules { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.rules b { color: var(--ink); font-weight: 600; }
 footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
 </style>
 
@@ -104,7 +121,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   <header>
     <span class="label">TCP/IND/4005 · CRVA future hazard · district level</span>
     <h1>Where each Rama Rao hazard bites</h1>
-    <p class="lede">Change in each of the 15 future-hazard indicators from Rama Rao et al. (2020), by district, from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots, identified either as the worst 10% of districts (percentile) or as districts more than one standard deviation worse than the mean change across districts (SD). Either way a district only counts if its change is actually adverse.</p>
+    <p class="lede">Two questions guide this page. <b>Is climate getting worse here?</b> looks at each district against its own past. <b>Where should we act first?</b> ranks districts against each other. Below the aggregate, each of the 15 future-hazard indicators from Rama Rao et al. (2020) is mapped by district from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots, identified either as the worst 10% of districts (percentile) or as districts more than one standard deviation worse than the mean change across districts (SD). Either way a district only counts if its change is actually adverse.</p>
   </header>
 
   <div class="controls" role="group" aria-label="Scenario">
@@ -113,6 +130,28 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
     <div class="seg" id="method" role="group" aria-label="Hotspot method"></div>
     <div class="key"><span class="hotkey" aria-hidden="true"></span><span id="hotlabel">hotspot</span></div>
   </div>
+
+
+  <section class="agg" aria-labelledby="agg-h">
+    <h2 id="agg-h">Aggregate future hazard</h2>
+    <div class="qtabs" id="qtabs">
+      <button type="button" class="qtab" data-q="abs" aria-pressed="true">Is climate getting worse here?<span>Weighted share of indicators at least 10% worse than the district's 1985–2014 mean</span></button>
+      <button type="button" class="qtab" data-q="rel" aria-pressed="false">Where should we act first?<span>Districts ranked against each other within the scenario</span></button>
+    </div>
+    <div class="seg" id="relmode" role="group" aria-label="Ranking categories" hidden></div>
+    <div class="agg-body">
+      <canvas class="aggmap" id="aggmap" role="img" aria-label="Map of aggregate future hazard by district"></canvas>
+      <div class="side">
+        <p id="agg-lede" class="lede"></p>
+        <div class="cats" id="aggcats"></div>
+        <div class="rules">
+          <div><b>Rainfall rule.</b> More rain counts as better only where the district's 1985–2014 rainfall is below 1,500 mm; in wetter districts an increase is neutral. Less rain counts as worse everywhere.</div>
+          <div><b>Weights.</b> Atlas Table 5c weights, with unusually hot days, unusually cold days and drought set to 0 because the ensemble-mean data cannot represent them. Their 20% is shared among the other 12 in proportion.</div>
+          <div id="wtable"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <section class="summary">
     <h2>Districts at least 10% worse than their historical mean</h2>
@@ -256,6 +295,7 @@ function hotStates(a) {
 }
 
 function render() {
+  if (typeof renderAgg === "function" && document.getElementById("aggmap")) renderAgg();
   document.querySelectorAll("#scen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === scen)));
   document.querySelectorAll("#method button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === method)));
   document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
@@ -324,6 +364,70 @@ document.getElementById("cards").addEventListener("mousemove", e => {
   tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
 });
 document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidden = true; });
+
+
+// ---------- aggregate ----------
+let q = "abs", relMode = "quintile";
+const ABS_CATS = ["None", "Low", "Moderate", "High"];
+const REL_CATS = ["Very low", "Low", "Medium", "High", "Very high"];
+const CLABEL = { annual_rain: "annual rain", june_rain: "June rain", july_rain: "July rain", rainy_days: "rainy days", tmax: "Tmax", tmin: "Tmin",
+  frost: "frost", dry_spells: "dry spells", p99_rain: "99th pct rain", events_100mm: ">100 mm events", rx1_pct: "max 1-day %", rx3_pct: "max 3-day %" };
+function catColor(cat) {
+  const t = q === "abs" ? { None: -0.15, Low: 0.3, Moderate: 0.65, High: 1 }[cat]
+                        : { "Very low": -1, Low: -0.45, Medium: 0, High: 0.55, "Very high": 1 }[cat];
+  return t == null ? css("--panel") : colorFor(t, 1);
+}
+function aggCat(e) { return !e ? null : q === "abs" ? e.ac : relMode === "quintile" ? e.rq : e.rd; }
+function renderAgg() {
+  document.querySelectorAll("#qtabs .qtab").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.q === q)));
+  const rm = document.getElementById("relmode");
+  rm.hidden = q !== "rel";
+  rm.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.r === relMode)));
+  const rows = DATA.agg[scen];
+  const cv = document.getElementById("aggmap");
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const bw = (bounds[2] - bounds[0]) * kx, bh = bounds[3] - bounds[1];
+  const sc = Math.min(w / bw, h / bh) * 0.98, ox = (w - bw * sc) / 2, oy = (h - bh * sc) / 2;
+  const P = ([x, y]) => [ox + (x - bounds[0]) * kx * sc, oy + (bounds[3] - y) * sc];
+  cv._paths = rings.map((polys, i) => {
+    const p2 = new Path2D();
+    polys.forEach(p => p.forEach(r => r.forEach((c, j) => { const [X, Y] = P(c); j ? p2.lineTo(X, Y) : p2.moveTo(X, Y); })));
+    ctx.fillStyle = catColor(aggCat(rows[i])); ctx.fill(p2, "evenodd");
+    ctx.lineWidth = 0.4; ctx.strokeStyle = css("--rule"); ctx.stroke(p2);
+    return p2;
+  });
+  const cats = q === "abs" ? ABS_CATS : REL_CATS;
+  const counts = Object.fromEntries(cats.map(c => [c, 0]));
+  rows.forEach(e => { const c = aggCat(e); if (c in counts) counts[c]++; });
+  const n = rows.filter(Boolean).length;
+  document.getElementById("aggcats").innerHTML = cats.slice().reverse().map(c =>
+    `<div class="cat"><i style="background:${catColor(c)}"></i><span>${c}${q === "abs" ? { None: " (no indicator 10% worse)", Low: " (under 20% of weight)", Moderate: " (20–40%)", High: " (over 40%)" }[c] : ""}</span><span class="num">${counts[c]} of ${n}</span></div>`).join("");
+  const med = (() => { const v = rows.filter(Boolean).map(e => e.as).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; })();
+  document.getElementById("agg-lede").textContent = q === "abs"
+    ? `For each district, the weight of indicators that end up at least 10% worse than the district's own 1985–2014 mean. This is an absolute measure, so scenarios can be compared. Median district: ${med.toFixed(1)}% of the weight.`
+    : `Each indicator ranks districts from least to most adverse change in this scenario; the weighted average rank gives a score from 0 to 100. Categories are ${relMode === "quintile" ? "fifths of districts (quintiles)" : "±0.5 and ±1.5 standard deviations around the mean score"}. This is relative: it shows where hazard is highest, not whether it is getting worse.`;
+  const W = DATA.agg_meta.weights, A = DATA.agg_meta.atlas_weights;
+  document.getElementById("wtable").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Indicator</th><th style="text-align:right">Atlas</th><th style="text-align:right">Used</th></tr></thead><tbody>${
+    Object.keys(A).map(id => `<tr><td>${INFO[id].label}</td><td class="n">${A[id]}%</td><td class="n">${W[id] ? W[id].toFixed(1) + "%" : "0"}</td></tr>`).join("")}</tbody></table></div>`;
+}
+document.getElementById("qtabs").addEventListener("click", e => { const b = e.target.closest(".qtab"); if (!b) return; q = b.dataset.q; renderAgg(); });
+document.getElementById("relmode").innerHTML = `<button type="button" data-r="quintile" aria-pressed="true">Quintiles</button><button type="button" data-r="sd" aria-pressed="false">Mean ± SD</button>`;
+document.getElementById("relmode").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; relMode = b.dataset.r; renderAgg(); });
+document.getElementById("aggmap").addEventListener("mousemove", e => {
+  const cv = e.currentTarget; if (!cv._paths) return;
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, ctx = cv.getContext("2d");
+  const i = cv._paths.findIndex(p => ctx.isPointInPath(p, (e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, "evenodd"));
+  const row = i >= 0 ? DATA.agg[scen][i] : null;
+  if (!row) { tip.hidden = true; return; }
+  const d = DATA.districts[i];
+  tip.innerHTML = `<b>${d.n}</b>, ${d.st}${row.wet ? " · wet (≥ 1,500 mm)" : ""}<br>` + (q === "abs"
+    ? `${row.ac}: <span class="num">${row.as.toFixed(1)}%</span> of weight 10% worse<br>${row.w.length ? "Worse: " + row.w.map(c => CLABEL[c]).join(", ") : "No indicator 10% worse"}`
+    : `${aggCat(row)}: score <span class="num">${row.rs.toFixed(1)}</span> of 100`);
+  tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
+});
+document.getElementById("aggmap").addEventListener("mouseleave", () => { tip.hidden = true; });
 
 let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);

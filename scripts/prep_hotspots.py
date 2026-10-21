@@ -11,6 +11,8 @@ def rnd(c):
     return [rnd(x) for x in c]
 feats=[]; vals={c["id"]:{f"{a}_{b}":[] for a,b in combos} for c in meta["components"]}
 rel={c["id"]:{f"{a}_{b}":[] for a,b in combos} for c in meta["components"]}
+agg={f"{a}_{b}":[] for a,b in combos}
+agg_meta=json.load(open("web/src/data/aggregate_hazard_meta.json"))
 for _,r in g.iterrows():
     k=f"district:{r.district_id}"
     inds=s.get(k,{}).get("climate_hazard",{}).get("indicators",{})
@@ -18,6 +20,14 @@ for _,r in g.iterrows():
     if not fhi or r.geometry is None: continue
     gi=r.geometry.__geo_interface__
     feats.append({"n":r["name"],"st":r["state_name"],"g":{"type":gi["type"],"coordinates":rnd(gi["coordinates"])}})
+    ah=s.get(k,{}).get("climate_hazard",{}).get("aggregate_hazard",{})
+    for a,b in combos:
+        e=ah.get(a,{}).get(b)
+        agg[f"{a}_{b}"].append(None if not e else {
+            "as":e["absolute"]["share"],"ac":e["absolute"]["category"],
+            "rs":e["relative"]["score"],"rq":e["relative"]["quintile"],"rd":e["relative"]["sd_class"],
+            "wet":e["wet_baseline"],
+            "w":[cid for cid,c in e["components"].items() if c["worse10"] and c["weight"]>0]})
     for c in meta["components"]:
         for a,b in combos:
             v=fhi.get(a,{}).get(b,{}).get("changes",{}).get(c["id"])
@@ -26,7 +36,7 @@ for _,r in g.iterrows():
             h=inds.get(c["source"],{}).get("historical",{}).get("mean")
             f=inds.get(c["source"],{}).get(a,{}).get(b,{}).get("mean")
             rel[c["id"]][f"{a}_{b}"].append(None if h is None or f is None or abs(h)<1e-9 else round((f-h)/abs(h)*100,2))
-out={"districts":feats,"values":vals,"rel":rel,"components":meta["components"],"combos":[f"{a}_{b}" for a,b in combos]}
+out={"districts":feats,"values":vals,"rel":rel,"agg":agg,"agg_meta":agg_meta,"components":meta["components"],"combos":[f"{a}_{b}" for a,b in combos]}
 p=Path(__file__).parent / "data.json"
 open(p,"w").write(json.dumps(out,separators=(",",":")))
 print(len(feats),"districts", round(os.path.getsize(p)/1e6,2),"MB")
