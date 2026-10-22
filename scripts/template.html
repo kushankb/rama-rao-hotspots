@@ -8,163 +8,150 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a summary table up top, then one card per indicator (map + distribution) in a two-column grid that stacks on phones. */
+/* Layout: sticky controls, then aggregate maps, the comparison of approaches, a per-indicator table, and one card per indicator. */
 :root {
-  --ground: #f4f5f1;
-  --panel: #ffffff;
-  --ink: #1d231f;
-  --muted: #5d665f;
-  --rule: #d9ddd4;
-  --accent: #1f5f5b;
-  --adverse: #b4441e;
-  --adverse-soft: #e9b49c;
-  --favour: #2c6e8f;
-  --favour-soft: #a9c9da;
-  --neutral: #ecebe4;
-  --hot: #1d231f;
+  --ground: #f4f5f1; --panel: #ffffff; --ink: #1d231f; --muted: #5d665f; --rule: #d9ddd4; --accent: #1f5f5b;
+  --adverse: #b4441e; --adverse-soft: #e9b49c; --favour: #2c6e8f; --favour-soft: #a9c9da; --neutral: #ecebe4; --hot: #1d231f;
   --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34;
-    --accent: #7fc3bc; --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568;
-    --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark;
-  }
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34; --accent: #7fc3bc;
+  --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568; --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark; } }
 :root[data-theme="dark"] {
-  --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34;
-  --accent: #7fc3bc; --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568;
-  --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark;
-}
+  --ground: #151916; --panel: #1d221e; --ink: #e6e9e3; --muted: #9aa49c; --rule: #333a34; --accent: #7fc3bc;
+  --adverse: #ec8c63; --adverse-soft: #7a4430; --favour: #74b3d6; --favour-soft: #2f5568; --neutral: #2b302c; --hot: #f2f4ef; color-scheme: dark; }
 * { box-sizing: border-box; }
-body {
-  background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
-  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 28px 64px;
-}
+body { background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px; }
 .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 28px; }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
-h1 { font-size: 30px; line-height: 1.15; }
-h2 { font-size: 20px; }
-h3 { font-size: 17px; }
-p { margin: 0; max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
+h1 { font-size: 30px; line-height: 1.15; } h2 { font-size: 20px; } h3 { font-size: 17px; }
+p { margin: 0; max-width: 72ch; }
 .lede { color: var(--muted); }
 .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
 .num { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
-
 header { display: grid; gap: 10px; }
-.controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+.controls { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   background: var(--ground); padding-block: 10px; border-bottom: 1px solid var(--rule); }
+.ctl { display: flex; align-items: center; gap: 8px; }
 .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--panel); }
 .seg button { font: 500 13px var(--font-body); color: var(--ink); background: transparent; border: 0; padding: 7px 12px; cursor: pointer; }
 .seg button + button { border-left: 1px solid var(--rule); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--panel); }
-.seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.seg button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+select { font: 500 13px var(--font-body); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 10px; }
 .key { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
-.ramp { width: 150px; height: 10px; border-radius: 2px; background: linear-gradient(to right, var(--favour), var(--favour-soft), var(--neutral), var(--adverse-soft), var(--adverse)); }
+.ramp { width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(to right, var(--favour), var(--favour-soft), var(--neutral), var(--adverse-soft), var(--adverse)); }
 .hotkey { width: 12px; height: 12px; border: 2px solid var(--hot); border-radius: 2px; display: inline-block; }
-
-.summary { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 12px; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.qtabs { display: flex; flex-wrap: wrap; gap: 10px; }
+.qtab { font: 600 15px var(--font-display); text-align: left; color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; cursor: pointer; display: grid; gap: 2px; flex: 1 1 220px; min-width: 0; }
+.qtab span { font: 400 12px var(--font-body); color: var(--muted); }
+.qtab[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.qtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.two { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 760px) { .two { grid-template-columns: minmax(0, 1fr); } }
+canvas.bigmap { width: 100%; aspect-ratio: 1 / 1.08; display: block; }
+.side { display: grid; gap: 12px; min-width: 0; }
+.cats { display: grid; gap: 6px; }
+.cat { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
+.cat i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--rule); }
+.cat .num { color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.note b { color: var(--ink); font-weight: 600; }
 .tablewrap { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th, td { padding: 6px 9px; text-align: left; border-bottom: 1px solid var(--rule); vertical-align: top; }
 th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
-td.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.unused-pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; white-space: nowrap; }
-.pill.agree { background: color-mix(in srgb, var(--favour) 18%, transparent); color: var(--favour); }
-.pill.differ { background: color-mix(in srgb, var(--adverse) 18%, transparent); color: var(--adverse); }
-.pill.partial { background: var(--neutral); color: var(--muted); }
-.bar { height: 8px; background: var(--neutral); border-radius: 2px; overflow: hidden; min-width: 80px; }
+td.n, th.n { text-align: right; font-family: var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.xt td.n { min-width: 46px; }
+table.xt td.hl { font-weight: 600; }
+.bar { height: 8px; background: var(--neutral); border-radius: 2px; overflow: hidden; min-width: 60px; }
 .bar i { display: block; height: 100%; background: var(--adverse); }
-
+.flag { font-size: 12px; color: var(--adverse); }
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
 @media (max-width: 860px) { .grid { grid-template-columns: minmax(0, 1fr); } }
 .card { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
 .card-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; flex-wrap: wrap; }
 .weight { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
-.flag { font-size: 12px; color: var(--adverse); }
 .viz { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 @media (max-width: 520px) { .viz { grid-template-columns: minmax(0, 1fr); } }
-canvas.map { width: 100%; aspect-ratio: 1 / 1.08; max-width: 100%; display: block; }
+canvas.map { width: 100%; aspect-ratio: 1 / 1.08; display: block; }
 svg.hist { width: 100%; height: auto; display: block; overflow: visible; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.stat { display: grid; gap: 2px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
 .stat .v { font-family: var(--font-data); font-size: 14px; font-variant-numeric: tabular-nums; }
-.compare { display: grid; gap: 6px; font-size: 13px; border-top: 1px solid var(--rule); padding-top: 10px; }
-.compare div { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
-.hotlist { font-size: 13px; color: var(--muted); }
-.hotlist b { color: var(--ink); font-weight: 600; }
-.tip { position: fixed; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 10; }
-
-.agg { background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 18px; display: grid; gap: 14px; }
-.qtabs { display: flex; flex-wrap: wrap; gap: 10px; }
-.qtab { font: 600 15px var(--font-display); text-align: left; color: var(--ink); background: var(--ground); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; cursor: pointer; display: grid; gap: 2px; min-width: 0; flex: 1 1 260px; }
-.qtab span { font: 400 12px var(--font-body); color: var(--muted); }
-.qtab[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.qtab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.agg-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 760px) { .agg-body { grid-template-columns: minmax(0, 1fr); } }
-canvas.aggmap { width: 100%; aspect-ratio: 1 / 1.08; display: block; }
-.cats { display: grid; gap: 6px; }
-.cat { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 13px; }
-.cat i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--rule); }
-.cat .num { color: var(--muted); }
-.side { display: grid; gap: 14px; min-width: 0; }
-.rules { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
-.rules b { color: var(--ink); font-weight: 600; }
+.hotlist { font-size: 13px; color: var(--muted); } .hotlist b { color: var(--ink); font-weight: 600; }
+.tip { position: fixed; pointer-events: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.15); z-index: 10; max-width: 300px; }
 footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
 </style>
 
 <div class="wrap">
   <header>
-    <span class="label">TCP/IND/4005 · CRVA future hazard · district level</span>
+    <span class="label">TCP/IND/4005 · CRVA future hazard · district level · SSP2-4.5</span>
     <h1>Where each Rama Rao hazard bites</h1>
-    <p class="lede">Two questions guide this page. <b>Is climate getting worse here?</b> looks at each district against its own past. <b>Where should we act first?</b> ranks districts against each other. Below the aggregate, each of the 15 future-hazard indicators from Rama Rao et al. (2020) is mapped by district from the INDRA-CMIP6 14-model ensemble (baseline 1985–2014). Colours are oriented so that red is always worse for agriculture and blue better. Outlined districts are hotspots, identified either as the worst 10% of districts (percentile) or as districts more than one standard deviation worse than the mean change across districts (SD). Either way a district only counts if its change is actually adverse.</p>
+    <p class="lede">Future climate hazard for agriculture from the 15 indicators of Rama Rao et al. (2020), computed separately in six INDRA-CMIP6 climate models (BCC-CSM2-MR, GFDL-ESM4, INM-CM5-0, MIROC6, MPI-ESM1-2-LR, NorESM2-MM) under SSP2-4.5 against 1985–2014. By default each value is the median of the six models; pick a model to see it alone, or the old 14-model ensemble mean for reference.</p>
   </header>
 
-  <div class="controls" role="group" aria-label="Scenario">
-    <div class="seg" id="scen"></div>
+  <div class="controls">
+    <div class="ctl"><span class="label">Period</span><div class="seg" id="period"></div></div>
+    <div class="ctl"><label class="label" for="source">Data</label><select id="source"></select></div>
     <div class="key"><span>better</span><span class="ramp" aria-hidden="true"></span><span>worse for agriculture</span></div>
-    <div class="seg" id="method" role="group" aria-label="Hotspot method"></div>
-    <div class="key"><span class="hotkey" aria-hidden="true"></span><span id="hotlabel">hotspot</span></div>
   </div>
 
-
-  <section class="agg" aria-labelledby="agg-h">
+  <section class="panel" aria-labelledby="agg-h">
     <h2 id="agg-h">Aggregate future hazard</h2>
     <div class="qtabs" id="qtabs">
-      <button type="button" class="qtab" data-q="abs" aria-pressed="true">Is climate getting worse here?<span>Weighted share of indicators whose change passes a worsening threshold, against the district's 1985–2014 mean</span></button>
-      <button type="button" class="qtab" data-q="rel" aria-pressed="false">Where should we act first?<span>Districts ranked against each other within the scenario</span></button>
+      <button type="button" class="qtab" data-q="atlas" aria-pressed="true">Rama Rao index<span>The Atlas method: sign-preserving normalisation, Table 5c weights, classes by SD around zero</span></button>
+      <button type="button" class="qtab" data-q="abs" aria-pressed="false">Is climate getting worse here?<span>Weighted share of indicators past a worsening threshold</span></button>
+      <button type="button" class="qtab" data-q="rel" aria-pressed="false">Where should we act first?<span>Districts ranked against each other</span></button>
     </div>
-    <div class="seg" id="relmode" role="group" aria-label="Ranking categories" hidden></div>
-    <div class="agg-body">
-      <canvas class="aggmap" id="aggmap" role="img" aria-label="Map of aggregate future hazard by district"></canvas>
+    <div class="seg" id="relmode" role="group" aria-label="Ranking classes" hidden></div>
+    <div class="two">
+      <canvas class="bigmap" id="aggmap" role="img" aria-label="Map of aggregate future hazard by district"></canvas>
       <div class="side">
         <p id="agg-lede" class="lede"></p>
         <div class="cats" id="aggcats"></div>
-        <div class="rules">
-          <div><b>Rainfall rule.</b> More rain counts as better only where the district's 1985–2014 rainfall is below 1,500 mm; in wetter districts an increase is neutral. Less rain counts as worse everywhere.</div>
-          <div><b>Thresholds.</b> A district counts as worse on an indicator when its change passes that indicator's threshold in the harmful direction. The thresholds are set for agricultural relevance and are not from the Atlas.</div>
-          <div><b>Weights.</b> Atlas Table 5c weights, with unusually hot days, unusually cold days and drought set to 0 because the ensemble-mean data cannot represent them. Their 20% is shared among the other 12 in proportion.</div>
-          <div id="wtable"></div>
-        </div>
+        <div class="note" id="aggnote"></div>
       </div>
     </div>
   </section>
 
-  <section class="summary">
-    <h2>Districts past each indicator's worsening threshold</h2>
-    <p class="lede">For each district, the change from its own 1985–2014 mean, judged against a threshold set for that indicator (for example rainfall down 10%, Tmax up 1 °C, 99th-percentile rain up 5 mm). In districts with at least 1,500 mm of baseline rainfall, more rain is neutral. The same thresholds drive the "Is climate getting worse here?" view above.</p>
+  <section class="panel" aria-labelledby="cmp-h">
+    <h2 id="cmp-h">How the approaches compare</h2>
+    <p class="lede">Both comparisons use the selected period. Counts are districts.</p>
+    <div class="qtabs" id="ctabs">
+      <button type="button" class="qtab" data-c="ens" aria-pressed="true">Ensemble mean → six models<span>Same Rama Rao index, computed on the averaged data and on each model (median)</span></button>
+      <button type="button" class="qtab" data-c="thr" aria-pressed="false">Rama Rao index vs thresholds<span>Six-model median of the Atlas index against "Is climate getting worse here?"</span></button>
+    </div>
+    <div class="two">
+      <canvas class="bigmap" id="cmpmap" role="img" aria-label="Map of districts that change category between approaches"></canvas>
+      <div class="side">
+        <p id="cmp-lede" class="lede"></p>
+        <div class="cats" id="cmpcats"></div>
+        <div class="tablewrap"><table class="xt" id="xtab"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Each indicator at a glance</h2>
+    <p class="lede" id="tab-lede"></p>
     <div class="tablewrap"><table id="sumtable"></table></div>
   </section>
 
+  <div class="controls" style="position:static;border:0;padding:0">
+    <div class="ctl"><span class="label">Hotspots</span><div class="seg" id="method"></div></div>
+    <div class="key"><span class="hotkey" aria-hidden="true"></span><span id="hotlabel"></span></div>
+  </div>
   <div class="grid" id="cards"></div>
 
   <footer>
-    <p>Method. Each value is the district mean of the 0.1° INDRA-CMIP6 ensemble over the future window minus the 1985–2014 baseline (percent change for rainfall and rainy days). Unusually hot and cold days use ±2 standard deviations of the baseline daily anomaly instead of the Atlas's ±4 °C, and drought proneness is proxied by SPI-3 drought frequency, because averaging 14 models removes most day-to-day and year-to-year variability. Windows: ~2050 = 2036–2065, ~2100 = 2071–2100. Hotspots: the percentile method flags the worst 10% of districts; the SD method flags districts whose change is more than one standard deviation worse than the mean change across all districts in that scenario. No values are removed; map colours saturate beyond the 2nd and 98th percentiles for readability only.</p>
-    <p>Source: Rama Rao C.A. et al. (2020), Atlas on Risk and Vulnerability of Indian Agriculture to Climate Change, ICAR-CRIDA, Tables 1 and 5c and section 4.4.</p>
+    <p>Method. Indicators follow the Atlas definitions in each model: unusually hot (Mar–May) and cold (Dec–Feb) days at ±4 °C from the 1985–2014 normal for that date; drought proneness as 2 × severe (&gt;50% annual rainfall deficit) + moderate (26–50%) years; dry-spell score for Jun–Oct spells of ≥14 days below 2.5 mm. Changes are district means of the 0.1° grid. Periods: ~2047 = 2033–2062, ~2050 = 2036–2065, ~2100 = 2071–2100.</p>
+    <p>Rama Rao index: change truncated at the 1st and 99th percentile, normalised as ±X/(max−min) or ±X/|X|max, weighted by Atlas Table 5c, classed by ±0.5 and ±1.5 SD around zero, computed per model; the median model value and the number of models agreeing are shown. Thresholds view: rainfall or rainy days −10%, Tmax or Tmin +1 °C, hot days +5, cold days +2, frost +5 days, drought +5 points, dry-spell score +1, 99th-percentile rain +5 mm, 100 mm events +0.5 a year, max 1- or 3-day rain share +10% relative; more rain is neutral where baseline rainfall is at least 1,500 mm. Ensemble mean: the earlier INDRA-CMIP6 14-model average, where hot and cold days use ±2 SD and drought uses SPI-3 because averaging removes day-to-day variability.</p>
+    <p>Source: Rama Rao C.A. et al. (2020), Atlas on Risk and Vulnerability of Indian Agriculture to Climate Change, ICAR-CRIDA. Part of FAO TCP/IND/4005.</p>
   </footer>
 </div>
 <div class="tip" id="tip" hidden></div>
@@ -172,268 +159,279 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
 <script>
 const DATA = __DATA__;
 const INFO = {
-  annual_rain:  { label: "Annual rainfall", unit: "%", atlas: "Mostly +3 to 6%; more than 6% in 57 districts; no district drier.", verdict: "differ", why: "Increases are 2–3× the Atlas." },
-  june_rain:    { label: "June rainfall", unit: "%", atlas: "Marginal increase in 501 districts; decline in 27 (Karnataka, Maharashtra, Kerala).", verdict: "differ", why: "Much larger increases; almost no declines." },
-  july_rain:    { label: "July rainfall", unit: "%", atlas: "Up to +5% in 471 districts; decline in 12.", verdict: "differ", why: "Increases 2–3× larger." },
-  rainy_days:   { label: "Rainy days (≥ 2.5 mm)", unit: "%", atlas: "Fewer rainy days in 48 districts; 3+ more in about 20.", verdict: "partial", why: "Similar share declining; ensemble drizzle inflates counts." },
-  tmax:         { label: "Maximum temperature", unit: "°C", atlas: "+1.0 to 1.3 °C in 256 districts, +1.3 to 1.6 °C in 157.", verdict: "agree", why: "Same range." },
-  tmin:         { label: "Minimum temperature", unit: "°C", atlas: "Below +1.3 °C in 199 districts, above +1.6 °C in 89.", verdict: "agree", why: "Same range." },
-  hot_days:     { label: "Unusually hot days (Mar–May)", unit: "days", atlas: "More than one extra day in only 54 districts, mostly Himalayan and north-east.", verdict: "differ", why: "±2 SD threshold saturates on smoothed data.", flag: "Scaled threshold (±2 SD)" },
-  cold_days:    { label: "Unusually cold days (Dec–Feb)", unit: "days", atlas: "Marginal increase in 526 districts; noticeable in 29.", verdict: "differ", why: "Falls to zero everywhere: opposite sign.", flag: "Scaled threshold (±2 SD)" },
-  frost:        { label: "Frost days", unit: "days", atlas: "About the same in 548 districts; 10+ fewer days in 11 (J&K).", verdict: "agree", why: "No change outside the hills." },
-  drought:      { label: "Drought proneness", unit: "pts", atlas: "Increase in about 302 districts, decrease in 144.", verdict: "differ", why: "Falls almost everywhere: opposite sign.", flag: "Proxy: SPI-3 drought frequency" },
-  dry_spells:   { label: "Dry-spell score (≥ 14 days)", unit: "score", atlas: "Increase in 119 districts; unchanged in 85.", verdict: "partial", why: "Fewer increases; mostly declines." },
-  p99_rain:     { label: "99th-percentile daily rain", unit: "mm", atlas: "+2 to 4 mm in 283 districts; more than 4 mm in 20.", verdict: "agree", why: "Same direction, slightly smaller." },
-  events_100mm: { label: "Events > 100 mm in 3 days", unit: "events", atlas: "Increase in all districts; more than 1.5 extra events in about 25.", verdict: "partial", why: "Rare in smoothed data; zero in about half." },
-  rx1_pct:      { label: "Max 1-day rain, % of normal", unit: "pts", atlas: "Marginal increase in most districts; decrease in 55.", verdict: "agree", why: "Same direction and size." },
-  rx3_pct:      { label: "Max 3-day rain, % of normal", unit: "pts", atlas: "+0.2 to 0.4 points in 174 districts; more than 0.4 in 25.", verdict: "agree", why: "Same direction and size." },
+  annual_rain:  { label: "Annual rainfall", unit: "%" },
+  june_rain:    { label: "June rainfall", unit: "%" },
+  july_rain:    { label: "July rainfall", unit: "%" },
+  rainy_days:   { label: "Rainy days (≥ 2.5 mm)", unit: "%" },
+  tmax:         { label: "Maximum temperature", unit: "°C" },
+  tmin:         { label: "Minimum temperature", unit: "°C" },
+  hot_days:     { label: "Unusually hot days (Mar–May)", unit: "days" },
+  cold_days:    { label: "Unusually cold days (Dec–Feb)", unit: "days" },
+  frost:        { label: "Frost days", unit: "days" },
+  drought:      { label: "Drought proneness", unit: "pts" },
+  dry_spells:   { label: "Dry-spell score (≥ 14 days)", unit: "score" },
+  p99_rain:     { label: "99th-percentile daily rain", unit: "mm" },
+  events_100mm: { label: "Events > 100 mm in 3 days", unit: "/yr" },
+  rx1_pct:      { label: "Max 1-day rain, % of normal", unit: "pts" },
+  rx3_pct:      { label: "Max 3-day rain, % of normal", unit: "pts" },
 };
-const SCEN = { SSP245_2050: "SSP2-4.5 · ~2050", SSP585_2050: "SSP5-8.5 · ~2050", SSP585_2100: "SSP5-8.5 · ~2100" };
-let scen = "SSP245_2050";
-const METHODS = { pct: "Worst 10%", sd: "Mean + 1 SD", both: "Both" };
-const METHOD_LABEL = { pct: "hotspot: worst 10% of districts", sd: "hotspot: more than 1 SD worse than the mean", both: "hotspot: flagged by both methods" };
-let method = "pct";
-try { const m = localStorage.getItem("rr-hot-method"); if (m && METHODS[m]) method = m; } catch (e) {}
-try { const s = localStorage.getItem("rr-hot-scen"); if (s && SCEN[s]) scen = s; } catch (e) {}
+const THR_TXT = { annual_rain: "−10%", june_rain: "−10%", july_rain: "−10%", rainy_days: "−10%", tmax: "+1.0 °C", tmin: "+1.0 °C", hot_days: "+5", cold_days: "+2",
+  frost: "+5", drought: "+5 pts", dry_spells: "+1", p99_rain: "+5 mm", events_100mm: "+0.5", rx1_pct: "+10% rel.", rx3_pct: "+10% rel." };
+const PERIODS = { "2047": "~2047", "2050": "~2050", "2100": "~2100" };
+const NM = DATA.models.length;
+const ATLAS = ["More favourable", "Moderately favourable", "No hazard", "Moderately unfavourable", "More unfavourable"];
+const ABS = ["None", "Low", "Moderate", "High"];
+const REL = ["Very low", "Low", "Medium", "High", "Very high"];
+
+const store = { get(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+let period = store.get("rr-period", "2050"); if (!PERIODS[period]) period = "2050";
+let source = store.get("rr-source", "median"); if (!DATA.sources.includes(source)) source = "median";
+let q = "atlas", relMode = "quintile", cmp = "ens", method = store.get("rr-method", "pct");
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const fmt = v => { const a = Math.abs(v); return (a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toFixed(2)); };
+const fmt = v => { const a = Math.abs(v); return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2); };
 const sgn = v => (v > 0 ? "+" : "") + fmt(v);
+const srcName = s => s === "median" ? `All ${NM} models (median)` : s === "ensemble" ? "Ensemble mean (old)" : s;
+function quantile(s, p) { const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
+function mix(a, b, t) { const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16)); return "rgb(" + pa.map((x, i) => Math.round(x + (pb[i] - x) * t)).join(",") + ")"; }
+function colorFor(v, amax) {
+  if (v == null) return css("--panel");
+  const t = Math.max(-1, Math.min(1, v / amax)), neu = css("--neutral");
+  if (t >= 0) return t < 0.5 ? mix(neu, css("--adverse-soft"), t * 2) : mix(css("--adverse-soft"), css("--adverse"), (t - 0.5) * 2);
+  const u = -t; return u < 0.5 ? mix(neu, css("--favour-soft"), u * 2) : mix(css("--favour-soft"), css("--favour"), (u - 0.5) * 2);
+}
 
-// geometry: equirectangular with cos(lat) correction, fitted once
+// geometry
 let bounds = [Infinity, Infinity, -Infinity, -Infinity];
 const rings = DATA.districts.map(d => {
   const polys = d.g.type === "Polygon" ? [d.g.coordinates] : d.g.coordinates;
-  polys.forEach(p => p.forEach(r => r.forEach(([x, y]) => {
-    bounds[0] = Math.min(bounds[0], x); bounds[1] = Math.min(bounds[1], y);
-    bounds[2] = Math.max(bounds[2], x); bounds[3] = Math.max(bounds[3], y);
-  })));
+  polys.forEach(p => p.forEach(r => r.forEach(([x, y]) => { bounds = [Math.min(bounds[0], x), Math.min(bounds[1], y), Math.max(bounds[2], x), Math.max(bounds[3], y)]; })));
   return polys;
 });
 const kx = Math.cos(22 * Math.PI / 180);
-
-function quantile(sorted, q) { const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); }
-
-function analyse(comp) {
-  const raw = DATA.values[comp.id][scen];
-  const adv = raw.map(v => v == null ? null : v * comp.sign);   // positive = worse
-  const vals = adv.filter(v => v != null).sort((a, b) => a - b);
-  const p90 = quantile(vals, 0.9);
-  const mean = vals.reduce((x, y) => x + y, 0) / vals.length;
-  const sd = Math.sqrt(vals.reduce((x, y) => x + (y - mean) ** 2, 0) / vals.length);
-  const hotP = adv.map(v => v != null && v > 0 && v >= p90);
-  const hotS = adv.map(v => v != null && v > 0 && v > mean + sd);
-  const hotB = hotP.map((x, i) => x && hotS[i]);
-  const hot = method === "pct" ? hotP : method === "sd" ? hotS : hotB;
-  const nAdverse = vals.filter(v => v > 0).length;
-  const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-9);
-  const rs = raw.filter(v => v != null).slice().sort((a, b) => a - b);
-  const rel = DATA.rel[comp.id][scen];
-  const relOk = rel.filter(v => v != null);
-  const nWorse10 = relOk.filter(v => v * comp.sign >= 10).length;
-  return { raw, adv, hot, hotP, hotS, hotB, nAdverse, nWorse10, nRel: relOk.length, nZero: rel.length - relOk.length, n: vals.length, amax, med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9) };
-}
-
-function mix(a, b, t) {
-  const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16));
-  return "rgb(" + pa.map((x, i) => Math.round(x + (pb[i] - x) * t)).join(",") + ")";
-}
-function colorFor(v, amax) {
-  if (v == null) return css("--panel");
-  const t = Math.max(-1, Math.min(1, v / amax));
-  const neu = css("--neutral");
-  if (t >= 0) return t < 0.5 ? mix(neu, css("--adverse-soft"), t * 2) : mix(css("--adverse-soft"), css("--adverse"), (t - 0.5) * 2);
-  const u = -t;
-  return u < 0.5 ? mix(neu, css("--favour-soft"), u * 2) : mix(css("--favour-soft"), css("--favour"), (u - 0.5) * 2);
-}
-
-function drawMap(canvas, a) {
-  const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
-  const bw = (bounds[2] - bounds[0]) * kx, bh = bounds[3] - bounds[1];
-  const s = Math.min(w / bw, h / bh) * 0.98, ox = (w - bw * s) / 2, oy = (h - bh * s) / 2;
-  const P = ([x, y]) => [ox + (x - bounds[0]) * kx * s, oy + (bounds[3] - y) * s];
-  canvas._proj = { s, ox, oy };
-  const path = polys => { ctx.beginPath(); polys.forEach(p => p.forEach(r => r.forEach((c, i) => { const [X, Y] = P(c); i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y); }))); };
-  ctx.lineWidth = 0.4; ctx.strokeStyle = css("--rule");
-  rings.forEach((polys, i) => { path(polys); ctx.fillStyle = colorFor(a.adv[i], a.amax); ctx.fill("evenodd"); ctx.stroke(); });
-  ctx.lineWidth = 1.6; ctx.strokeStyle = css("--hot");
-  rings.forEach((polys, i) => { if (a.hot[i]) { path(polys); ctx.stroke(); } });
-  canvas._paths = rings.map(polys => { const p2 = new Path2D(); polys.forEach(p => p.forEach(r => r.forEach((c, j) => { const [X, Y] = P(c); j ? p2.lineTo(X, Y) : p2.moveTo(X, Y); }))); return p2; });
-}
-
-function drawHist(svg, comp, a) {
-  const W = 300, H = 170, m = { l: 34, r: 8, t: 10, b: 30 };
-  const vals = a.raw.filter(v => v != null);
-  let lo = Math.min(...vals), hi = Math.max(...vals);
-  lo = Math.min(lo, 0); hi = Math.max(hi, 0);
-  if (hi - lo < 1e-6) { hi = lo + 1; }
-  const nb = 24, step = (hi - lo) / nb, counts = new Array(nb).fill(0);
-  vals.forEach(v => counts[Math.min(nb - 1, Math.floor((v - lo) / step))]++);
-  const cmax = Math.max(...counts);
-  const x = v => m.l + (v - lo) / (hi - lo) * (W - m.l - m.r), y = c => H - m.b - c / cmax * (H - m.t - m.b);
-  const bars = counts.map((c, i) => {
-    const mid = lo + (i + 0.5) * step;
-    return `<rect x="${x(lo + i * step) + 0.5}" y="${y(c)}" width="${Math.max(0.5, x(lo + (i + 1) * step) - x(lo + i * step) - 1)}" height="${H - m.b - y(c)}" fill="${colorFor(mid * comp.sign, a.amax)}" stroke="var(--rule)" stroke-width="0.5"/>`;
-  }).join("");
-  const ticks = [lo, 0, hi].filter((v, i, arr) => arr.indexOf(v) === i).map(v => `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font-data)">${sgn(v)}</text>`).join("");
-  const zero = `<line x1="${x(0)}" x2="${x(0)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink)" stroke-width="1" stroke-dasharray="3 2"/>`;
-  const med = `<line x1="${x(a.med)}" x2="${x(a.med)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--accent)" stroke-width="1.5"/><text x="${x(a.med)}" y="${m.t + 2}" dx="4" font-size="10" fill="var(--accent)" font-family="var(--font-data)" dominant-baseline="hanging">median</text>`;
-  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  svg.innerHTML = `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--rule)"/>
-    <text x="${m.l - 6}" y="${y(cmax)}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">${cmax}</text>
-    <text x="${m.l - 6}" y="${H - m.b}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">0</text>
-    ${bars}${zero}${med}${ticks}
-    <text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">change (${INFO[comp.id].unit}) · districts per bin</text>`;
-}
-
-function hotStates(a) {
-  const c = {};
-  DATA.districts.forEach((d, i) => { if (a.hot[i]) c[d.st] = (c[d.st] || 0) + 1; });
-  return Object.entries(c).sort((x, y) => y[1] - x[1]).slice(0, 4);
-}
-
-function render() {
-  if (typeof renderAgg === "function" && document.getElementById("aggmap")) renderAgg();
-  document.querySelectorAll("#scen button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === scen)));
-  document.querySelectorAll("#method button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === method)));
-  document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
-  const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
-  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th style="text-align:right">Weight</th><th style="text-align:right">Median change</th><th style="text-align:right">Worse if</th><th>Districts past threshold</th></tr></thead><tbody>` +
-    rows.map(({ c, a }) => {
-      const rowsA = DATA.agg[scen].filter(Boolean), nP = rowsA.filter(e => e.w.includes(c.id)).length;
-      const pct = rowsA.length ? nP / rowsA.length * 100 : 0, inf = INFO[c.id];
-      return `<tr><td>${inf.label}${inf.flag ? ` <span class="flag">· ${inf.flag}</span>` : ""}</td><td class="n">${c.weight}%</td><td class="n">${sgn(a.med)} ${inf.unit}</td><td class="n">${THR[c.id]}</td>
-        <td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px;white-space:nowrap">${nP} of ${rowsA.length}</span></div></td></tr>`;
-    }).join("") + "</tbody>";
-
-  const host = document.getElementById("cards");
-  if (!host.children.length) {
-    host.innerHTML = DATA.components.map(c => `<article class="card" id="c-${c.id}">
-      <div class="card-head"><h3>${INFO[c.id].label}</h3><span class="weight">weight ${c.weight}% · ${c.sign > 0 ? "increase = worse" : "increase = better"}</span></div>
-      ${INFO[c.id].flag ? `<div class="flag">${INFO[c.id].flag}</div>` : ""}
-      <div class="viz"><canvas class="map" role="img" aria-label="Map of change in ${INFO[c.id].label} by district"></canvas><svg class="hist" role="img" aria-label="Distribution of district changes"></svg></div>
-      <div class="stats"></div>
-      <div class="hotlist"></div>
-      <div class="compare"><div><span class="label">Atlas</span><span>${INFO[c.id].atlas}</span></div></div>
-    </article>`).join("");
-  }
-  rows.forEach(({ c, a }) => {
-    const el = document.getElementById("c-" + c.id), inf = INFO[c.id];
-    drawMap(el.querySelector("canvas"), a);
-    el.querySelector("canvas")._a = a; el.querySelector("canvas")._c = c;
-    drawHist(el.querySelector("svg"), c, a);
-    el.querySelector(".stats").innerHTML =
-      `<div class="stat"><span class="label">Median</span><span class="v">${sgn(a.med)} ${inf.unit}</span></div>
-       <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>
-       <div class="stat"><span class="label">Past threshold</span><span class="v">${DATA.agg[scen].filter(e => e && e.w.includes(c.id)).length} of ${DATA.agg[scen].filter(Boolean).length}</span></div>`;
-    const hs = hotStates(a), nHot = a.hot.filter(Boolean).length;
-    const cnt = x => x.filter(Boolean).length;
-    el.querySelector(".hotlist").innerHTML = (nHot
-      ? `<b>${nHot} hotspot districts</b>, most in ${hs.map(([s, n]) => `${s} (${n})`).join(", ")}.`
-      : `<b>No hotspots</b> by this method in this scenario.`)
-      + ` <span class="num">Worst 10%: ${cnt(a.hotP)} · mean + 1 SD: ${cnt(a.hotS)} · both: ${cnt(a.hotB)}</span>`;
-  });
-}
-
-document.getElementById("scen").innerHTML = Object.entries(SCEN).map(([k, v]) => `<button type="button" data-s="${k}" aria-pressed="false">${v}</button>`).join("");
-document.getElementById("scen").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  scen = b.dataset.s; try { localStorage.setItem("rr-hot-scen", scen); } catch (err) {}
-  render();
-});
-
-document.getElementById("method").innerHTML = Object.entries(METHODS).map(([k, v]) => `<button type="button" data-m="${k}" aria-pressed="false">${v}</button>`).join("");
-document.getElementById("method").addEventListener("click", e => {
-  const b = e.target.closest("button"); if (!b) return;
-  method = b.dataset.m; try { localStorage.setItem("rr-hot-method", method); } catch (err) {}
-  render();
-});
-
-const tip = document.getElementById("tip");
-document.getElementById("cards").addEventListener("mousemove", e => {
-  const cv = e.target.closest("canvas.map"); if (!cv || !cv._paths) { tip.hidden = true; return; }
-  const r = cv.getBoundingClientRect(), ctx = cv.getContext("2d"), dpr = window.devicePixelRatio || 1;
-  const X = (e.clientX - r.left) * dpr, Y = (e.clientY - r.top) * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const i = cv._paths.findIndex(p => ctx.isPointInPath(p, X, Y, "evenodd"));
-  if (i < 0) { tip.hidden = true; return; }
-  const d = DATA.districts[i], v = cv._a.raw[i];
-  tip.innerHTML = `<b>${d.n}</b>, ${d.st}<br><span class="num">${v == null ? "no data" : sgn(v) + " " + INFO[cv._c.id].unit}</span>${cv._a.hot[i] ? " · hotspot" : ""}`;
-  tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
-});
-document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidden = true; });
-
-
-// ---------- aggregate ----------
-let q = "abs", relMode = "quintile";
-const W0 = DATA.agg_meta.weights;
-const THR = { annual_rain: "−10%", june_rain: "−10%", july_rain: "−10%", rainy_days: "−10%", tmax: "+1.0 °C", tmin: "+1.0 °C",
-  hot_days: "+5 days", cold_days: "+2 days", frost: "+5 days", drought: "+5 pts", dry_spells: "+1", p99_rain: "+5 mm",
-  events_100mm: "+0.5 events", rx1_pct: "+10% relative", rx3_pct: "+10% relative" };
-const ABS_CATS = ["None", "Low", "Moderate", "High"];
-const REL_CATS = ["Very low", "Low", "Medium", "High", "Very high"];
-const CLABEL = { hot_days: "hot days", cold_days: "cold days", drought: "drought", annual_rain: "annual rain", june_rain: "June rain", july_rain: "July rain", rainy_days: "rainy days", tmax: "Tmax", tmin: "Tmin",
-  frost: "frost", dry_spells: "dry spells", p99_rain: "99th pct rain", events_100mm: ">100 mm events", rx1_pct: "max 1-day %", rx3_pct: "max 3-day %" };
-function catColor(cat) {
-  const t = q === "abs" ? { None: -0.15, Low: 0.3, Moderate: 0.65, High: 1 }[cat]
-                        : { "Very low": -1, Low: -0.45, Medium: 0, High: 0.55, "Very high": 1 }[cat];
-  return t == null ? css("--panel") : colorFor(t, 1);
-}
-function aggCat(e) { return !e ? null : q === "abs" ? e.ac : relMode === "quintile" ? e.rq : e.rd; }
-function renderAgg() {
-  document.querySelectorAll("#qtabs .qtab").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.q === q)));
-  const rm = document.getElementById("relmode");
-  rm.hidden = q !== "rel";
-  rm.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.r === relMode)));
-  const rows = DATA.agg[scen];
-  const cv = document.getElementById("aggmap");
+function paint(cv, fill, outline) {
   const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
   cv.width = w * dpr; cv.height = h * dpr;
   const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
   const bw = (bounds[2] - bounds[0]) * kx, bh = bounds[3] - bounds[1];
-  const sc = Math.min(w / bw, h / bh) * 0.98, ox = (w - bw * sc) / 2, oy = (h - bh * sc) / 2;
-  const P = ([x, y]) => [ox + (x - bounds[0]) * kx * sc, oy + (bounds[3] - y) * sc];
+  const s = Math.min(w / bw, h / bh) * 0.98, ox = (w - bw * s) / 2, oy = (h - bh * s) / 2;
+  const P = ([x, y]) => [ox + (x - bounds[0]) * kx * s, oy + (bounds[3] - y) * s];
   cv._paths = rings.map((polys, i) => {
     const p2 = new Path2D();
     polys.forEach(p => p.forEach(r => r.forEach((c, j) => { const [X, Y] = P(c); j ? p2.lineTo(X, Y) : p2.moveTo(X, Y); })));
-    ctx.fillStyle = catColor(aggCat(rows[i])); ctx.fill(p2, "evenodd");
-    ctx.lineWidth = 0.4; ctx.strokeStyle = css("--rule"); ctx.stroke(p2);
+    ctx.fillStyle = fill(i); ctx.fill(p2, "evenodd"); ctx.lineWidth = 0.4; ctx.strokeStyle = css("--rule"); ctx.stroke(p2);
     return p2;
   });
-  const cats = q === "abs" ? ABS_CATS : REL_CATS;
+  if (outline) { ctx.lineWidth = 1.6; ctx.strokeStyle = css("--hot"); cv._paths.forEach((p, i) => { if (outline(i)) ctx.stroke(p); }); }
+}
+function hit(cv, e) {
+  if (!cv._paths) return -1;
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, ctx = cv.getContext("2d");
+  return cv._paths.findIndex(p => ctx.isPointInPath(p, (e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, "evenodd"));
+}
+const tip = document.getElementById("tip");
+function showTip(e, html) { tip.innerHTML = html; tip.hidden = false; tip.style.left = Math.min(e.clientX + 12, innerWidth - 310) + "px"; tip.style.top = (e.clientY + 12) + "px"; }
+
+// ---------- aggregate ----------
+const aggRow = i => DATA.agg[source][period][i];
+const CLASS_T = {
+  atlas: { "More favourable": -1, "Moderately favourable": -0.45, "No hazard": 0, "Moderately unfavourable": 0.55, "More unfavourable": 1 },
+  abs: { None: -0.15, Low: 0.3, Moderate: 0.65, High: 1 },
+  rel: { "Very low": -1, Low: -0.45, Medium: 0, High: 0.55, "Very high": 1 },
+};
+function aggCat(e) { if (!e) return null; return q === "atlas" ? e.ac : q === "abs" ? e.tc : relMode === "quintile" ? e.rq : e.rd; }
+function catColor(cat, kind = q) { const t = CLASS_T[kind][cat]; return t == null ? css("--panel") : colorFor(t, 1); }
+function renderAgg() {
+  document.querySelectorAll("#qtabs .qtab").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.q === q)));
+  const rm = document.getElementById("relmode"); rm.hidden = q !== "rel";
+  rm.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.r === relMode)));
+  const rows = DATA.agg[source][period];
+  paint(document.getElementById("aggmap"), i => catColor(aggCat(rows[i])));
+  const cats = q === "atlas" ? ATLAS : q === "abs" ? ABS : REL;
   const counts = Object.fromEntries(cats.map(c => [c, 0]));
   rows.forEach(e => { const c = aggCat(e); if (c in counts) counts[c]++; });
-  const n = rows.filter(Boolean).length;
+  const n = rows.filter(e => aggCat(e)).length;
+  const extra = { None: " (no indicator past threshold)", Low: " (under 20% of weight)", Moderate: " (20–40%)", High: " (over 40%)" };
   document.getElementById("aggcats").innerHTML = cats.slice().reverse().map(c =>
-    `<div class="cat"><i style="background:${catColor(c)}"></i><span>${c}${q === "abs" ? { None: " (no indicator past threshold)", Low: " (under 20% of weight)", Moderate: " (20–40%)", High: " (over 40%)" }[c] : ""}</span><span class="num">${counts[c]} of ${n}</span></div>`).join("");
-  const med = (() => { const v = rows.filter(Boolean).map(e => e.as).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; })();
-  document.getElementById("agg-lede").textContent = q === "abs"
-    ? `For each district, the weight of indicators whose change from the district's own 1985–2014 mean passes that indicator's worsening threshold (table below). This is an absolute measure, so scenarios can be compared. Median district: ${med.toFixed(1)}% of the weight.`
-    : `Each indicator ranks districts from least to most adverse change in this scenario; the weighted average rank gives a score from 0 to 100. Categories are ${relMode === "quintile" ? "fifths of districts (quintiles)" : "±0.5 and ±1.5 standard deviations around the mean score"}. This is relative: it shows where hazard is highest, not whether it is getting worse.`;
-  const W = DATA.agg_meta.weights, A = DATA.agg_meta.atlas_weights;
-  document.getElementById("wtable").innerHTML = `<div class="tablewrap"><table><thead><tr><th>Indicator</th><th style="text-align:right">Atlas wt</th><th style="text-align:right">Used</th><th style="text-align:right">Worse if</th></tr></thead><tbody>${
-    Object.keys(A).map(id => `<tr><td>${INFO[id].label}</td><td class="n">${A[id]}%</td><td class="n">${W[id] ? W[id].toFixed(1) + "%" : "0"}</td><td class="n">${THR[id]}</td></tr>`).join("")}</tbody></table></div>`;
+    `<div class="cat"><i style="background:${catColor(c)}"></i><span>${c}${q === "abs" ? extra[c] : ""}</span><span class="num">${counts[c]} of ${n}</span></div>`).join("");
+  let agreeLine = "";
+  if (source === "median") {
+    if (q === "atlas") { const nu = rows.filter(e => e && e.nu >= 4).length, nf = rows.filter(e => e && e.nf >= 4).length;
+      agreeLine = `<div><b>Model agreement.</b> ${nu} districts are unfavourable in at least 4 of ${NM} models; ${nf} are favourable in at least 4.</div>`; }
+    if (q === "abs") { const nm = rows.filter(e => e && e.nm >= 4).length;
+      agreeLine = `<div><b>Model agreement.</b> ${nm} districts are Moderate or worse in at least 4 of ${NM} models.</div>`; }
+  }
+  const LEDE = {
+    atlas: "The Atlas method as published: each indicator's change is truncated at the 1st and 99th percentile, normalised with its sign kept, weighted, and summed. Classes are ±0.5 and ±1.5 standard deviations around zero, where zero means no change. With all models, each model is scored on its own and the median model is shown.",
+    abs: "For each district, the weight of indicators whose change from the district's own 1985–2014 mean passes that indicator's worsening threshold. An absolute measure, so periods can be compared.",
+    rel: `Each indicator ranks districts from least to most adverse change; the weighted average rank gives a score from 0 to 100, classed by ${relMode === "quintile" ? "fifths of districts" : "±0.5 and ±1.5 SD around the mean"}. Relative: it shows where hazard is highest, not whether it is getting worse.`,
+  };
+  document.getElementById("agg-lede").textContent = LEDE[q];
+  document.getElementById("aggnote").innerHTML = agreeLine + `<div><b>Showing:</b> ${srcName(source)}, SSP2-4.5 ${PERIODS[period]}.</div>`;
 }
-document.getElementById("qtabs").addEventListener("click", e => { const b = e.target.closest(".qtab"); if (!b) return; q = b.dataset.q; renderAgg(); });
-document.getElementById("relmode").innerHTML = `<button type="button" data-r="quintile" aria-pressed="true">Quintiles</button><button type="button" data-r="sd" aria-pressed="false">Mean ± SD</button>`;
-document.getElementById("relmode").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; relMode = b.dataset.r; renderAgg(); });
+document.getElementById("qtabs").addEventListener("click", e => { const b = e.target.closest(".qtab"); if (b) { q = b.dataset.q; renderAgg(); } });
+document.getElementById("relmode").innerHTML = `<button type="button" data-r="quintile">Quintiles</button><button type="button" data-r="sd">Mean ± SD</button>`;
+document.getElementById("relmode").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { relMode = b.dataset.r; renderAgg(); } });
 document.getElementById("aggmap").addEventListener("mousemove", e => {
-  const cv = e.currentTarget; if (!cv._paths) return;
-  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, ctx = cv.getContext("2d");
-  const i = cv._paths.findIndex(p => ctx.isPointInPath(p, (e.clientX - r.left) * dpr, (e.clientY - r.top) * dpr, "evenodd"));
-  const row = i >= 0 ? DATA.agg[scen][i] : null;
-  if (!row) { tip.hidden = true; return; }
+  const i = hit(e.currentTarget, e), row = i >= 0 ? aggRow(i) : null; if (!row) { tip.hidden = true; return; }
   const d = DATA.districts[i];
-  tip.innerHTML = `<b>${d.n}</b>, ${d.st}${row.wet ? " · wet (≥ 1,500 mm)" : ""}<br>` + (q === "abs"
-    ? `${row.ac}: <span class="num">${row.as.toFixed(1)}%</span> of weight past threshold<br>${row.w.filter(c => W0[c]).length ? "Past threshold: " + row.w.filter(c => W0[c]).map(c => CLABEL[c]).join(", ") : "No weighted indicator past threshold"}`
-    : `${aggCat(row)}: score <span class="num">${row.rs.toFixed(1)}</span> of 100`);
-  tip.hidden = false; tip.style.left = (e.clientX + 12) + "px"; tip.style.top = (e.clientY + 12) + "px";
+  let h = `<b>${d.n}</b>, ${d.st}<br>`;
+  if (q === "atlas") h += `${row.ac}: index <span class="num">${row.ai != null ? sgn(row.ai) : "–"}</span>` + (row.nu != null ? `<br>${row.nu} of ${NM} models unfavourable, ${row.nf} favourable` : "");
+  else if (q === "abs") h += `${row.tc}: <span class="num">${row.ts != null ? row.ts.toFixed(1) : "–"}%</span> of weight past threshold` + (row.nm != null ? `<br>${row.nm} of ${NM} models Moderate or worse` : "");
+  else h += `${aggCat(row)}: rank score <span class="num">${row.rs != null ? row.rs.toFixed(0) : "–"}</span> / 100`;
+  showTip(e, h);
 });
 document.getElementById("aggmap").addEventListener("mouseleave", () => { tip.hidden = true; });
 
+// ---------- comparison ----------
+const SHIFT = { worse: "Moved to a less favourable class", same: "Same class", better: "Moved to a more favourable class", na: "No data" };
+const AGREE4 = { both: "Flagged by both", atlas: "Rama Rao index only (unfavourable)", thr: "Thresholds only (Moderate or High)", neither: "Neither" };
+function cmpClass(i) {
+  const m = DATA.agg.median[period][i];
+  if (cmp === "ens") {
+    const e = DATA.agg.ensemble[period][i];
+    if (!m || !e || !e.ac || !m.ac) return "na";
+    const d = ATLAS.indexOf(m.ac) - ATLAS.indexOf(e.ac);
+    return d > 0 ? "worse" : d < 0 ? "better" : "same";
+  }
+  if (!m || !m.ac || !m.tc) return "na";
+  const a = ATLAS.indexOf(m.ac) >= 3, t = m.tc === "Moderate" || m.tc === "High";
+  return a && t ? "both" : a ? "atlas" : t ? "thr" : "neither";
+}
+function cmpColor(c) {
+  return { worse: css("--adverse"), better: css("--favour"), same: css("--neutral"), na: css("--panel"),
+           both: css("--adverse"), atlas: css("--adverse-soft"), thr: mix(css("--neutral"), css("--accent").length === 7 ? css("--accent") : "#1f5f5b", 0.55), neither: css("--neutral") }[c];
+}
+function renderCmp() {
+  document.querySelectorAll("#ctabs .qtab").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.c === cmp)));
+  const n = DATA.districts.length, cls = Array.from({ length: n }, (_, i) => cmpClass(i));
+  paint(document.getElementById("cmpmap"), i => cmpColor(cls[i]));
+  const keys = cmp === "ens" ? ["worse", "same", "better"] : ["both", "atlas", "thr", "neither"];
+  const lab = cmp === "ens" ? SHIFT : AGREE4;
+  document.getElementById("cmpcats").innerHTML = keys.map(k => `<div class="cat"><i style="background:${cmpColor(k)}"></i><span>${lab[k]}</span><span class="num">${cls.filter(c => c === k).length}</span></div>`).join("");
+  document.getElementById("cmp-lede").textContent = cmp === "ens"
+    ? `Rama Rao index class on the 14-model ensemble mean (rows) against the median of ${NM} individual models (columns), SSP2-4.5 ${PERIODS[period]}. Averaging models first removes droughts, dry days and unusual days, which pushes the ensemble towards favourable.`
+    : `Six-model median of the Rama Rao index (rows) against "Is climate getting worse here?" (columns), SSP2-4.5 ${PERIODS[period]}. The index weighs favourable changes against adverse ones; the threshold view only counts indicators that clearly worsen.`;
+  const rowsK = ATLAS, colsK = cmp === "ens" ? ATLAS : ABS;
+  const M = rowsK.map(() => colsK.map(() => 0));
+  for (let i = 0; i < n; i++) {
+    const m = DATA.agg.median[period][i]; if (!m) continue;
+    const r = cmp === "ens" ? DATA.agg.ensemble[period][i]?.ac : m.ac, c = cmp === "ens" ? m.ac : m.tc;
+    const ri = rowsK.indexOf(r), ci = colsK.indexOf(c); if (ri >= 0 && ci >= 0) M[ri][ci]++;
+  }
+  const short = s => s.replace("Moderately ", "Mod. ").replace("favourable", "fav.").replace("unfavourable", "unfav.");
+  document.getElementById("xtab").innerHTML = `<thead><tr><th>${cmp === "ens" ? "Ensemble ↓ / Models →" : "Index ↓ / Thresholds →"}</th>${colsK.map(c => `<th class="n">${short(c)}</th>`).join("")}</tr></thead><tbody>` +
+    rowsK.map((r, ri) => `<tr><td>${short(r)}</td>${colsK.map((c, ci) => `<td class="n${cmp === "ens" && ri === ci ? " hl" : ""}">${M[ri][ci] || "·"}</td>`).join("")}</tr>`).join("") + "</tbody>";
+}
+document.getElementById("ctabs").addEventListener("click", e => { const b = e.target.closest(".qtab"); if (b) { cmp = b.dataset.c; renderCmp(); } });
+document.getElementById("cmpmap").addEventListener("mousemove", e => {
+  const i = hit(e.currentTarget, e); if (i < 0) { tip.hidden = true; return; }
+  const d = DATA.districts[i], m = DATA.agg.median[period][i] || {}, en = DATA.agg.ensemble[period][i] || {};
+  showTip(e, `<b>${d.n}</b>, ${d.st}<br>` + (cmp === "ens" ? `Ensemble: ${en.ac ?? "–"}<br>${NM} models: ${m.ac ?? "–"}` : `Rama Rao index: ${m.ac ?? "–"}<br>Thresholds: ${m.tc ?? "–"} (${m.ts != null ? m.ts.toFixed(0) : "–"}% of weight)`));
+});
+document.getElementById("cmpmap").addEventListener("mouseleave", () => { tip.hidden = true; });
+
+// ---------- indicators ----------
+function analyse(c) {
+  const raw = DATA.values[source][c][period], sign = DATA.sign[c];
+  const adv = raw.map(v => v == null ? null : v * sign);
+  const vals = adv.filter(v => v != null).sort((a, b) => a - b);
+  const rs = raw.filter(v => v != null).sort((a, b) => a - b);
+  if (!vals.length) return { raw, adv, n: 0 };
+  const p90 = quantile(vals, 0.9), mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+  const hotP = adv.map(v => v != null && v > 0 && v >= p90), hotS = adv.map(v => v != null && v > 0 && v > mean + sd), hotB = hotP.map((x, i) => x && hotS[i]);
+  const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-9);
+  const wv = DATA.worse[source][c][period];
+  return { raw, adv, n: vals.length, amax, hotP, hotS, hotB, hot: method === "pct" ? hotP : method === "sd" ? hotS : hotB,
+    med: quantile(rs, 0.5), p10: quantile(rs, 0.1), p90r: quantile(rs, 0.9), nAdv: vals.filter(v => v > 0).length,
+    nWorse: wv.filter(x => x === true).length, nValid: wv.filter(x => x != null).length };
+}
+function drawHist(svg, c, a) {
+  const W = 300, H = 170, m = { l: 34, r: 8, t: 10, b: 30 };
+  const vals = a.raw.filter(v => v != null); let lo = Math.min(...vals, 0), hi = Math.max(...vals, 0); if (hi - lo < 1e-6) hi = lo + 1;
+  const nb = 24, step = (hi - lo) / nb, counts = new Array(nb).fill(0);
+  vals.forEach(v => counts[Math.min(nb - 1, Math.floor((v - lo) / step))]++);
+  const cmax = Math.max(...counts), x = v => m.l + (v - lo) / (hi - lo) * (W - m.l - m.r), y = k => H - m.b - k / cmax * (H - m.t - m.b);
+  const bars = counts.map((k, i) => `<rect x="${x(lo + i * step) + 0.5}" y="${y(k)}" width="${Math.max(0.5, x(lo + (i + 1) * step) - x(lo + i * step) - 1)}" height="${H - m.b - y(k)}" fill="${colorFor((lo + (i + 0.5) * step) * DATA.sign[c], a.amax)}" stroke="var(--rule)" stroke-width="0.5"/>`).join("");
+  const ticks = [lo, 0, hi].filter((v, i, arr) => arr.indexOf(v) === i).map(v => `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font-data)">${sgn(v)}</text>`).join("");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--rule)"/>
+    <text x="${m.l - 6}" y="${y(cmax)}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">${cmax}</text>
+    <text x="${m.l - 6}" y="${H - m.b}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="var(--font-data)" dominant-baseline="middle">0</text>
+    ${bars}<line x1="${x(0)}" x2="${x(0)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink)" stroke-dasharray="3 2"/>
+    <line x1="${x(a.med)}" x2="${x(a.med)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--accent)" stroke-width="1.5"/>
+    <text x="${x(a.med)}" y="${m.t + 2}" dx="4" font-size="10" fill="var(--accent)" font-family="var(--font-data)" dominant-baseline="hanging">median</text>
+    ${ticks}<text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">change (${INFO[c].unit}) · districts per bin</text>`;
+}
+function renderTable(rows) {
+  const isMed = source === "median";
+  document.getElementById("tab-lede").textContent = isMed
+    ? `Median change across the ${NM} models (district median), the districts where at least 4 of ${NM} models agree the change is adverse, and the districts past the worsening threshold in at least 4 models. SSP2-4.5 ${PERIODS[period]}.`
+    : `${srcName(source)}, SSP2-4.5 ${PERIODS[period]}: median change across districts, districts with an adverse change, and districts past the worsening threshold.`;
+  const hdr = isMed ? `<th class="n">≥4 models adverse</th><th class="n">≥4 models past threshold</th>` : `<th class="n">Adverse</th><th class="n">Past threshold</th>`;
+  document.getElementById("sumtable").innerHTML = `<thead><tr><th>Indicator</th><th class="n">Atlas wt</th><th class="n">Median change</th><th class="n">Worse if</th>${hdr}</tr></thead><tbody>` +
+    rows.map(({ c, a }) => {
+      let advN, worseN;
+      if (isMed) { const ag = DATA.agree[c][period]; advN = ag.filter(x => x && x[0] >= 4).length; worseN = ag.filter(x => x && x[1] >= 4).length; }
+      else { advN = a.nAdv; worseN = a.nWorse; }
+      const pct = a.n ? worseN / a.n * 100 : 0;
+      return `<tr><td>${INFO[c].label}</td><td class="n">${DATA.weights[c]}%</td><td class="n">${a.n ? sgn(a.med) : "–"} ${INFO[c].unit}</td><td class="n">${THR_TXT[c]}</td>
+        <td class="n">${advN}</td><td><div style="display:flex;gap:8px;align-items:center"><div class="bar" style="flex:1"><i style="width:${pct}%"></i></div><span class="num" style="font-size:12px">${worseN}</span></div></td></tr>`;
+    }).join("") + "</tbody>";
+}
+function renderCards(rows) {
+  const host = document.getElementById("cards");
+  if (!host.children.length) host.innerHTML = DATA.components.map(c => `<article class="card" id="c-${c}">
+      <div class="card-head"><h3>${INFO[c].label}</h3><span class="weight">Atlas weight ${DATA.weights[c]}% · ${DATA.sign[c] > 0 ? "increase = worse" : "decrease = worse"}</span></div>
+      <div class="viz"><canvas class="map" role="img" aria-label="Map of change in ${INFO[c].label}"></canvas><svg class="hist" role="img" aria-label="Distribution of district changes"></svg></div>
+      <div class="stats"></div><div class="hotlist"></div></article>`).join("");
+  const cnt = x => x.filter(Boolean).length;
+  rows.forEach(({ c, a }) => {
+    const el = document.getElementById("c-" + c), cv = el.querySelector("canvas");
+    if (!a.n) { el.querySelector(".stats").textContent = "No data for this selection."; return; }
+    paint(cv, i => colorFor(a.adv[i], a.amax), i => a.hot[i]); cv._a = a; cv._c = c;
+    drawHist(el.querySelector("svg"), c, a);
+    let third = `<div class="stat"><span class="label">Past threshold</span><span class="v">${a.nWorse} of ${a.nValid}</span></div>`;
+    if (source === "median") { const ag = DATA.agree[c][period]; third = `<div class="stat"><span class="label">≥4 models adverse</span><span class="v">${ag.filter(x => x && x[0] >= 4).length} of ${a.n}</span></div>`; }
+    el.querySelector(".stats").innerHTML = `<div class="stat"><span class="label">Median</span><span class="v">${sgn(a.med)} ${INFO[c].unit}</span></div>
+      <div class="stat"><span class="label">10th–90th pct</span><span class="v">${sgn(a.p10)} to ${sgn(a.p90r)}</span></div>${third}`;
+    const st = {}; DATA.districts.forEach((d, i) => { if (a.hot[i]) st[d.st] = (st[d.st] || 0) + 1; });
+    const top = Object.entries(st).sort((x, y) => y[1] - x[1]).slice(0, 4), nHot = cnt(a.hot);
+    el.querySelector(".hotlist").innerHTML = (nHot ? `<b>${nHot} hotspot districts</b>, most in ${top.map(([s, k]) => `${s} (${k})`).join(", ")}.` : `<b>No hotspots</b> by this method.`)
+      + ` <span class="num">Worst 10%: ${cnt(a.hotP)} · mean + 1 SD: ${cnt(a.hotS)} · both: ${cnt(a.hotB)}</span>`;
+  });
+}
+document.getElementById("cards").addEventListener("mousemove", e => {
+  const cv = e.target.closest("canvas.map"); if (!cv || !cv._a) { tip.hidden = true; return; }
+  const i = hit(cv, e); if (i < 0) { tip.hidden = true; return; }
+  const d = DATA.districts[i], v = cv._a.raw[i], c = cv._c;
+  let h = `<b>${d.n}</b>, ${d.st}<br><span class="num">${v == null ? "no data" : sgn(v) + " " + INFO[c].unit}</span>${cv._a.hot[i] ? " · hotspot" : ""}`;
+  if (source === "median") { const rg = DATA.range[c][period][i], ag = DATA.agree[c][period][i];
+    if (rg) h += `<br>${NM} models: ${sgn(rg[0])} to ${sgn(rg[1])}<br>${ag[0]} of ${NM} adverse, ${ag[1]} past threshold`; }
+  showTip(e, h);
+});
+document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidden = true; });
+
+// ---------- controls ----------
+const METHODS = { pct: "Worst 10%", sd: "Mean + 1 SD", both: "Both" };
+const METHOD_LABEL = { pct: "hotspot: worst 10% of districts", sd: "hotspot: more than 1 SD worse than the mean", both: "hotspot: flagged by both methods" };
+document.getElementById("period").innerHTML = Object.entries(PERIODS).map(([k, v]) => `<button type="button" data-p="${k}">${v}</button>`).join("");
+document.getElementById("period").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { period = b.dataset.p; store.set("rr-period", period); render(); } });
+document.getElementById("source").innerHTML = DATA.sources.map(s => `<option value="${s}">${srcName(s)}</option>`).join("");
+document.getElementById("source").addEventListener("change", e => { source = e.target.value; store.set("rr-source", source); render(); });
+document.getElementById("method").innerHTML = Object.entries(METHODS).map(([k, v]) => `<button type="button" data-m="${k}">${v}</button>`).join("");
+document.getElementById("method").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { method = b.dataset.m; store.set("rr-method", method); render(); } });
+
+function render() {
+  document.querySelectorAll("#period button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.p === period)));
+  document.querySelectorAll("#method button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.m === method)));
+  document.getElementById("source").value = source;
+  document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
+  renderAgg(); renderCmp();
+  const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
+  renderTable(rows); renderCards(rows);
+}
 let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
 new MutationObserver(render).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });

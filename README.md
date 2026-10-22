@@ -7,7 +7,7 @@ and compared with the Atlas's own results.
 
 Live: https://kushankbajaj.com/rama-rao-hotspots/
 
-- Scenarios: SSP2-4.5 ~2050, SSP5-8.5 ~2050, SSP5-8.5 ~2100 (windows 2036–2065 and
+- Six INDRA-CMIP6 models (BCC-CSM2-MR, GFDL-ESM4, INM-CM5-0, MIROC6, MPI-ESM1-2-LR, NorESM2-MM), SSP2-4.5 ~2047, ~2050, ~2100 (windows 2033–2062, 2036–2065,
   2071–2100) against a 1985–2014 baseline.
 - Hotspots: the 10% of districts with the most adverse change in each scenario,
   counted only where the change is adverse.
