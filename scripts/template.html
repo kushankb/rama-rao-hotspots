@@ -142,6 +142,13 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
     <div class="tablewrap"><table id="sumtable"></table></div>
   </section>
 
+  <section class="panel" aria-labelledby="cx-h">
+    <h2 id="cx-h">Compound extremes</h2>
+    <p class="lede">Extremes that strike together, counted year-round and reported by crop season. Thresholds come from each model's own 1985–2014 climate. Shown for information: they are not part of the Rama Rao index. Maps show the change in days per year.</p>
+    <div class="ctl"><span class="label">Season</span><div class="seg" id="season"></div></div>
+    <div class="grid" id="cxcards"></div>
+  </section>
+
   <div class="controls" style="position:static;border:0;padding:0">
     <div class="ctl"><span class="label">Hotspots</span><div class="seg" id="method"></div></div>
     <div class="key"><span class="hotkey" aria-hidden="true"></span><span id="hotlabel"></span></div>
@@ -151,6 +158,7 @@ footer { color: var(--muted); font-size: 12px; display: grid; gap: 6px; }
   <footer>
     <p>Method. Indicators follow the Atlas definitions in each model: unusually hot (Mar–May) and cold (Dec–Feb) days at ±4 °C from the 1985–2014 normal for that date; drought proneness as 2 × severe (&gt;50% annual rainfall deficit) + moderate (26–50%) years; dry-spell score for Jun–Oct spells of ≥14 days below 2.5 mm. Changes are district means of the 0.1° grid. Periods: ~2047 = 2033–2062, ~2050 = 2036–2065, ~2100 = 2071–2100.</p>
     <p>Rama Rao index: change truncated at the 1st and 99th percentile, normalised as ±X/(max−min) or ±X/|X|max, weighted by Atlas Table 5c, classed by ±0.5 and ±1.5 SD around zero, computed per model; the median model value and the number of models agreeing are shown. Thresholds view: rainfall or rainy days −10%, Tmax or Tmin +1 °C, hot days +5, cold days +2, frost +5 days, drought +5 points, dry-spell score +1, 99th-percentile rain +5 mm, 100 mm events +0.5 a year, max 1- or 3-day rain share +10% relative; more rain is neutral where baseline rainfall is at least 1,500 mm. Ensemble mean: the earlier INDRA-CMIP6 14-model average, where hot and cold days use ±2 SD and drought uses SPI-3 because averaging removes day-to-day variability.</p>
+    <p>Compound extremes: daily flags computed year-round in each model with 1985–2014 thresholds per grid cell (Tmax and Tmin 90th percentile and trailing 30-day rainfall 10th percentile by calendar month; wet-day rainfall 95th percentile), counted per season and averaged over each period. Kharif Jun–Oct, rabi Nov–Mar, summer Apr–May. Not part of any aggregate.</p>
     <p>Source: Rama Rao C.A. et al. (2020), Atlas on Risk and Vulnerability of Indian Agriculture to Climate Change, ICAR-CRIDA. Part of FAO TCP/IND/4005.</p>
   </footer>
 </div>
@@ -190,7 +198,7 @@ let q = "atlas", relMode = "quintile", cmp = "ens", method = store.get("rr-metho
 
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = v => { const a = Math.abs(v); return a >= 100 ? v.toFixed(0) : a >= 10 ? v.toFixed(1) : v.toFixed(2); };
-const sgn = v => (v > 0 ? "+" : "") + fmt(v);
+const sgn = v => { const x = Math.abs(v) < 0.005 ? 0 : v; return (x > 0 ? "+" : "") + fmt(x); };
 const srcName = s => s === "median" ? `All ${NM} models (median)` : s === "ensemble" ? "Ensemble mean (old)" : s;
 function quantile(s, p) { const i = (s.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i); return s[lo] + (s[hi] - s[lo]) * (i - lo); }
 function mix(a, b, t) { const pa = a.match(/\w\w/g).map(h => parseInt(h, 16)), pb = b.match(/\w\w/g).map(h => parseInt(h, 16)); return "rgb(" + pa.map((x, i) => Math.round(x + (pb[i] - x) * t)).join(",") + ")"; }
@@ -353,7 +361,7 @@ function drawHist(svg, c, a) {
   const nb = 24, step = (hi - lo) / nb, counts = new Array(nb).fill(0);
   vals.forEach(v => counts[Math.min(nb - 1, Math.floor((v - lo) / step))]++);
   const cmax = Math.max(...counts), x = v => m.l + (v - lo) / (hi - lo) * (W - m.l - m.r), y = k => H - m.b - k / cmax * (H - m.t - m.b);
-  const bars = counts.map((k, i) => `<rect x="${x(lo + i * step) + 0.5}" y="${y(k)}" width="${Math.max(0.5, x(lo + (i + 1) * step) - x(lo + i * step) - 1)}" height="${H - m.b - y(k)}" fill="${colorFor((lo + (i + 0.5) * step) * DATA.sign[c], a.amax)}" stroke="var(--rule)" stroke-width="0.5"/>`).join("");
+  const bars = counts.map((k, i) => `<rect x="${x(lo + i * step) + 0.5}" y="${y(k)}" width="${Math.max(0.5, x(lo + (i + 1) * step) - x(lo + i * step) - 1)}" height="${H - m.b - y(k)}" fill="${colorFor((lo + (i + 0.5) * step) * (c === "__cx" ? 1 : DATA.sign[c]), a.amax)}" stroke="var(--rule)" stroke-width="0.5"/>`).join("");
   const ticks = [lo, 0, hi].filter((v, i, arr) => arr.indexOf(v) === i).map(v => `<text x="${x(v)}" y="${H - m.b + 16}" text-anchor="middle" font-size="10" fill="var(--muted)" font-family="var(--font-data)">${sgn(v)}</text>`).join("");
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
   svg.innerHTML = `<line x1="${m.l}" x2="${W - m.r}" y1="${H - m.b}" y2="${H - m.b}" stroke="var(--rule)"/>
@@ -362,7 +370,7 @@ function drawHist(svg, c, a) {
     ${bars}<line x1="${x(0)}" x2="${x(0)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--ink)" stroke-dasharray="3 2"/>
     <line x1="${x(a.med)}" x2="${x(a.med)}" y1="${m.t}" y2="${H - m.b}" stroke="var(--accent)" stroke-width="1.5"/>
     <text x="${x(a.med)}" y="${m.t + 2}" dx="4" font-size="10" fill="var(--accent)" font-family="var(--font-data)" dominant-baseline="hanging">median</text>
-    ${ticks}<text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">change (${INFO[c].unit}) · districts per bin</text>`;
+    ${ticks}<text x="${(W + m.l) / 2}" y="${H - 2}" text-anchor="middle" font-size="10" fill="var(--muted)">change (${c === "__cx" ? "days/yr" : INFO[c].unit}) · districts per bin</text>`;
 }
 function renderTable(rows) {
   const isMed = source === "median";
@@ -413,6 +421,47 @@ document.getElementById("cards").addEventListener("mousemove", e => {
 });
 document.getElementById("cards").addEventListener("mouseleave", () => { tip.hidden = true; });
 
+// ---------- compound extremes ----------
+const CX = {
+  hot_dry:   { label: "Hot-and-dry days", desc: "Tmax above its 90th percentile while the previous 30 days' rainfall is below its 10th percentile." },
+  hot_night: { label: "Hot days with hot nights", desc: "Tmax and Tmin both above their 90th percentiles: no relief at night." },
+  whiplash:  { label: "Dry-to-wet whiplash", desc: "Heavy rain (above the wet-day 95th percentile) within 5 days after a dry spell of 14 days or more." },
+};
+const SEASONS = { kharif: "Kharif (Jun–Oct)", rabi: "Rabi (Nov–Mar)", summer: "Summer (Apr–May)", annual: "Annual" };
+let season = store.get("rr-season", "kharif"); if (!SEASONS[season]) season = "kharif";
+function renderCX() {
+  document.querySelectorAll("#season button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.s === season)));
+  const host = document.getElementById("cxcards");
+  if (!host.children.length) host.innerHTML = DATA.cx.flags.map(f => `<article class="card" id="cx-${f}">
+      <div class="card-head"><h3>${CX[f].label}</h3><span class="weight">days per year · not weighted</span></div>
+      <p class="lede" style="font-size:13px">${CX[f].desc}</p>
+      <div class="viz"><canvas class="map" role="img" aria-label="Map of change in ${CX[f].label}"></canvas><svg class="hist" role="img" aria-label="Distribution of district changes"></svg></div>
+      <div class="stats"></div></article>`).join("");
+  const src = source === "ensemble" ? "median" : source;
+  DATA.cx.flags.forEach(f => {
+    const key = `${f}_${season}`, el = document.getElementById("cx-" + f), cv = el.querySelector("canvas");
+    const raw = DATA.cx.chg[key][src][period], base = DATA.cx.base[key];
+    const vals = raw.filter(v => v != null).sort((a, b) => a - b);
+    const amax = Math.max(Math.abs(quantile(vals, 0.02)), Math.abs(quantile(vals, 0.98)), 1e-3);
+    paint(cv, i => colorFor(raw[i], amax)); cv._cx = { raw, key, f };
+    drawHist(el.querySelector("svg"), "__cx", { raw, amax, med: quantile(vals, 0.5) });
+    const bs = base.filter(v => v != null).sort((a, b) => a - b);
+    const ag = DATA.cx.agree[key][period];
+    el.querySelector(".stats").innerHTML = `<div class="stat"><span class="label">1985–2014 median</span><span class="v">${fmt(quantile(bs, 0.5))} d/yr</span></div>
+      <div class="stat"><span class="label">Median change</span><span class="v">${sgn(quantile(vals, 0.5))} d/yr</span></div>
+      <div class="stat"><span class="label">≥4 of ${NM} models up</span><span class="v">${ag.filter(x => x != null && x >= 4).length} districts</span></div>`;
+  });
+}
+document.getElementById("season").innerHTML = Object.entries(SEASONS).map(([k, v]) => `<button type="button" data-s="${k}">${v}</button>`).join("");
+document.getElementById("season").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { season = b.dataset.s; store.set("rr-season", season); renderCX(); } });
+document.getElementById("cxcards").addEventListener("mousemove", e => {
+  const cv = e.target.closest("canvas.map"); if (!cv || !cv._cx) { tip.hidden = true; return; }
+  const i = hit(cv, e); if (i < 0) { tip.hidden = true; return; }
+  const d = DATA.districts[i], { raw, key } = cv._cx, rg = DATA.cx.rng[key][period][i], ag = DATA.cx.agree[key][period][i];
+  showTip(e, `<b>${d.n}</b>, ${d.st}<br>1985–2014: <span class="num">${DATA.cx.base[key][i] != null ? fmt(DATA.cx.base[key][i]) : "–"}</span> d/yr<br>Change: <span class="num">${raw[i] != null ? sgn(raw[i]) : "–"}</span> d/yr` + (rg ? `<br>${NM} models: ${sgn(rg[0])} to ${sgn(rg[1])}, ${ag} of ${NM} up` : ""));
+});
+document.getElementById("cxcards").addEventListener("mouseleave", () => { tip.hidden = true; });
+
 // ---------- controls ----------
 const METHODS = { pct: "Worst 10%", sd: "Mean + 1 SD", both: "Both" };
 const METHOD_LABEL = { pct: "hotspot: worst 10% of districts", sd: "hotspot: more than 1 SD worse than the mean", both: "hotspot: flagged by both methods" };
@@ -430,7 +479,7 @@ function render() {
   document.getElementById("hotlabel").textContent = METHOD_LABEL[method];
   renderAgg(); renderCmp();
   const rows = DATA.components.map(c => ({ c, a: analyse(c) }));
-  renderTable(rows); renderCards(rows);
+  renderTable(rows); renderCards(rows); renderCX();
 }
 let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
 window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);

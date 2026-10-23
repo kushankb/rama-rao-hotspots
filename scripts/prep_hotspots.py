@@ -147,7 +147,18 @@ for m in models:
             z = (v - mu) / sd
             e["rd"] = "Very high" if z > 1.5 else "High" if z > 0.5 else "Medium" if z > -0.5 else "Low" if z > -1.5 else "Very low"
 
-out = {"districts": feats, "windows": WINDOWS, "models": models, "sources": sources, "components": COMPS,
+# compound extremes (14_compound_web.py), re-indexed to this page's district order
+cxd = json.load(open("web/public/data/compound.json"))
+cpos = {a: i for i, a in enumerate(cxd["admins"])}
+order = [cpos.get(a.split(":", 1)[1]) for a in admins]
+pick = lambda arr: [arr[j] if j is not None else None for j in order]
+cx = {"seasons": cxd["seasons"], "flags": cxd["flags"], "models": [s for s in cxd["sources"] if s != "median"],
+      "chg": {k: {s: {w: pick(v3) for w, v3 in v2.items()} for s, v2 in v1.items()} for k, v1 in cxd["chg"].items()},
+      "base": {k: pick(v1["median"]["base"]) for k, v1 in cxd["ind"].items()},
+      "agree": {k: {w: pick(v2) for w, v2 in v1.items()} for k, v1 in cxd["agree"].items()},
+      "rng": {k: {w: pick(v2) for w, v2 in v1.items()} for k, v1 in cxd["rng"].items()}}
+
+out = {"cx": cx, "districts": feats, "windows": WINDOWS, "models": models, "sources": sources, "components": COMPS,
        "weights": WEIGHTS, "sign": SIGN, "thresholds": THRESH,
        "values": values, "worse": worse, "range": rng, "agree": agree, "agg": agg}
 OUT.write_text(json.dumps(out, separators=(",", ":")))
